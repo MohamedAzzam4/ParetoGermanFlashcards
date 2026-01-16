@@ -30,6 +30,10 @@
         .stat-box { background: #f9fafb; padding: 12px; border-radius: 12px; border: 1px solid #e5e7eb; }
         .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
         .stat-label { font-size: 0.85rem; color: var(--text-light); }
+        
+        /* CLICKABLE GOAL BOX */
+        .stat-box.clickable { cursor: pointer; transition: background 0.2s; border: 2px dashed #cbd5e1; }
+        .stat-box.clickable:hover { background: #e0e7ff; border-color: var(--primary); }
 
         /* Action Buttons */
         .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
@@ -123,16 +127,15 @@
                 <h1 style="margin-bottom: 5px; margin-top: 10px;">🇩🇪 Dashboard</h1>
                 <p style="color: var(--text-light); margin-bottom: 20px;">Pareto Principle</p>
                 <div class="action-grid">
-                    <!-- Disabled by default to prevent confusion -->
                     <button id="btn-review" class="btn-big btn-review" disabled onclick="app.startSession('review')"><span>📚 Reviews</span><span id="count-review" class="count-badge">0</span></button>
                     <button id="btn-new" class="btn-big btn-learn" disabled onclick="app.startSession('new')"><span>✨ New Words</span><span id="count-new" class="count-badge">0</span></button>
                 </div>
                 <div class="stats-grid">
                     <div class="stat-box"><div class="stat-value" id="stat-total">0</div><div class="stat-label">Total Words</div></div>
                     <div class="stat-box"><div class="stat-value" id="stat-learned">0</div><div class="stat-label">Learned</div></div>
-                    <!-- GOAL RESTORED HERE -->
                     <div class="stat-box"><div class="stat-value" id="stat-new">0</div><div class="stat-label">New Available</div></div>
-                    <div class="stat-box"><div class="stat-value" id="stat-goal">1000</div><div class="stat-label">Goal (Edit)</div></div>
+                    <!-- GOAL BOX: Explicitly clickable -->
+                    <div class="stat-box clickable" onclick="app.editGoal()"><div class="stat-value" id="stat-goal">1000</div><div class="stat-label">🎯 Goal (Tap to Edit)</div></div>
                 </div>
             </div>
             <div class="dashboard-card" style="padding: 16px;">
@@ -141,7 +144,6 @@
                     <button class="btn btn-secondary" onclick="app.showVocabList()">📖 View List</button>
                     <button class="btn btn-secondary" onclick="app.showImport()">📥 Add Words</button>
                 </div>
-                <!-- THE FIXER BUTTON -->
                 <button class="btn btn-secondary btn-warning" style="margin-top:10px;" onclick="app.runDiagnostics()">🛠️ Fix Database (Ghost Words)</button>
                 <button class="btn btn-secondary btn-danger" style="margin-top:5px;" onclick="app.resetData()">🗑️ Reset Data</button>
             </div>
@@ -177,7 +179,8 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;"><h2>List</h2><button class="btn btn-sm btn-secondary" onclick="app.goHome()">Back</button></div>
                 <input type="text" id="search-input" class="search-bar" placeholder="Search..." onkeyup="app.renderVocabList()">
                 <div id="bulk-actions" style="margin-bottom: 10px; display: none;"><button class="btn btn-sm btn-danger" onclick="app.deleteSelected()">🗑️ Delete (<span id="selected-count">0</span>)</button></div>
-                <div class="table-container"><table><thead><tr><th style="width: 40px;"><input type="checkbox" id="select-all" onclick="app.toggleSelectAll()"></th><th>Word</th><th>Meaning</th><th>Lvl</th><th>Streak</th><th style="text-align: right;">Action</th></tr></thead><tbody id="vocab-table-body"></tbody></table></div>
+                <div class="table-container"><table><thead><tr><th style="width: 40px;"><input type="checkbox" id="select-all" onclick="app.toggleSelectAll()"></th><th>Word</th><th>Meaning</th><th>Lvl</th><th>Act</th></tr></thead><tbody id="vocab-table-body"></tbody></table></div>
+                <p id="table-count" style="margin-top: 10px; color: var(--text-light); font-size: 0.9rem;"></p>
             </div>
         </div>
 
@@ -195,6 +198,7 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // === USER'S LIVE CONFIG ===
         const firebaseConfig = {
             apiKey: "AIzaSyABm29aJZQcCipXiBrnASs2sq6cGfDn3u8",
             authDomain: "flashcards-a3b48.firebaseapp.com",
@@ -208,12 +212,13 @@
         window.app = {
             db: [], firestore: null, userId: null, unsubscribe: null,
             sessionQueue: [], currentCardIdx: null, intervals: [1, 3, 7, 14, 30], batchSize: 50, voices: [],
+            goal: 1000,
 
             init: async function() {
                 const firebaseApp = initializeApp(firebaseConfig);
                 const auth = getAuth(firebaseApp);
                 this.firestore = getFirestore(firebaseApp);
-                this.log("Connecting to Firebase...");
+                this.log("Connecting...");
 
                 await signInAnonymously(auth);
 
@@ -285,6 +290,7 @@
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         this.db = data.cards || [];
+                        this.goal = data.goal || 1000;
                         this.log(`Data Sync: Received ${this.db.length} cards.`);
                         this.updateDashboard(); 
                     } else {
@@ -299,10 +305,9 @@
                 });
             },
 
-            // --- THE FIXER FUNCTION 🛠️ ---
+            // --- THE FIXER FUNCTION ---
             runDiagnostics: function() {
                 if(!this.db || this.db.length === 0) { alert("Database is empty. Nothing to fix."); return; }
-                
                 let fixedCount = 0;
                 this.db.forEach(c => {
                     let dirty = false;
@@ -311,13 +316,8 @@
                     if (!c.str || isNaN(c.str)) { c.str = 0; dirty = true; }
                     if(dirty) fixedCount++;
                 });
-
-                if(fixedCount > 0) {
-                    this.saveToCloud();
-                    alert(`✅ Fixed ${fixedCount} broken words! Check the dashboard now.`);
-                } else {
-                    alert("Database looks healthy! No issues found.");
-                }
+                if(fixedCount > 0) { this.saveToCloud(); alert(`✅ Fixed ${fixedCount} broken words! Check the dashboard now.`); }
+                else { alert("Database looks healthy! No issues found."); }
             },
 
             saveToCloud: async function() {
@@ -325,8 +325,16 @@
                 this.showStatus('syncing');
                 try {
                     const docRef = doc(this.firestore, 'users', this.userId, 'flashcards', 'main');
-                    await setDoc(docRef, { cards: this.db, updated: new Date().toISOString() });
+                    await setDoc(docRef, { cards: this.db, goal: this.goal, updated: new Date().toISOString() });
                 } catch (error) { this.log("Save Failed: " + error.message); }
+            },
+
+            editGoal: function() {
+                const g = prompt("Set your learning goal (e.g., 1000):", this.goal);
+                if (g && !isNaN(g)) {
+                    this.goal = parseInt(g);
+                    this.saveToCloud();
+                }
             },
 
             log: function(msg) {
@@ -344,44 +352,28 @@
 
             resetData: function() { if(confirm("DELETE all data?")) { this.db = []; this.saveToCloud(); } },
 
-            // --- DASHBOARD (CRASH PROOF) ---
+            // --- DASHBOARD ---
             updateDashboard: function() {
                 try {
                     const now = Date.now();
-                    
                     let reviews = 0, newWords = 0, learned = 0;
-                    
                     if (this.db && Array.isArray(this.db)) {
                         reviews = this.db.filter(c => c.s === 'active' && c.due <= now).length;
                         newWords = this.db.filter(c => c.s === 'new').length;
                         learned = this.db.filter(c => c.s === 'active' && c.str > 0).length;
                     }
-
                     this.log(`UI Update: Rev=${reviews}, New=${newWords}, Total=${this.db.length}`);
-
-                    const setText = (id, val) => {
-                        const el = document.getElementById(id);
-                        if(el) el.textContent = val;
-                    };
-
+                    const setText = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
                     setText('stat-total', this.db.length);
                     setText('stat-learned', learned);
                     setText('stat-due', reviews);
                     setText('stat-new', newWords);
-                    
+                    setText('stat-goal', this.goal || 1000); 
                     setText('count-review', reviews);
                     setText('count-new', newWords);
-                    
-                    const btnReview = document.getElementById('btn-review');
-                    if(btnReview) btnReview.disabled = (reviews === 0);
-                    
-                    const btnNew = document.getElementById('btn-new');
-                    if(btnNew) btnNew.disabled = (newWords === 0);
-
-                } catch (e) {
-                    console.error("Dashboard Error:", e);
-                    this.log("UI Error: " + e.message);
-                }
+                    const btnReview = document.getElementById('btn-review'); if(btnReview) btnReview.disabled = (reviews === 0);
+                    const btnNew = document.getElementById('btn-new'); if(btnNew) btnNew.disabled = (newWords === 0);
+                } catch (e) { console.error("Dashboard Error:", e); this.log("UI Error: " + e.message); }
             },
 
             processImport: function() {
@@ -469,27 +461,30 @@
             showScreen: function(id) { document.querySelectorAll('.screen').forEach(el => el.classList.remove('active')); document.getElementById(id).classList.add('active'); },
             showVocabList: function() { this.showScreen('vocab'); this.renderVocabList(); }, showImport: function() { this.showScreen('import'); }, goHome: function() { this.showScreen('dashboard'); this.updateDashboard(); },
             
-            // --- CRASH PROOF RENDER LIST ---
+            // --- SAFE LIST RENDER ---
             renderVocabList: function() {
                 try {
-                    const q = document.getElementById('search-input').value.toLowerCase();
+                    if (!this.db || !Array.isArray(this.db)) return;
+                    const q = (document.getElementById('search-input').value || "").toLowerCase();
                     const tbody = document.getElementById('vocab-table-body'); tbody.innerHTML = '';
                     
-                    // SAFE FILTER: Checks if property exists before calling toLowerCase
-                    const filtered = this.db.filter(c => 
-                        (c.f && c.f.toLowerCase().includes(q)) || 
-                        (c.b && c.b.toLowerCase().includes(q))
-                    );
+                    const filtered = this.db.filter(c => {
+                        if (!c) return false;
+                        const f = String(c.f || "").toLowerCase();
+                        const b = String(c.b || "").toLowerCase();
+                        return f.includes(q) || b.includes(q);
+                    });
                     
-                    document.getElementById('table-count').innerText = `Count: ${filtered.length}`;
+                    // Fixed: Added check for element existence
+                    const countEl = document.getElementById('table-count');
+                    if (countEl) countEl.innerText = `Count: ${filtered.length}`;
+                    
                     document.getElementById('select-all').checked = false; this.updateBulkButton();
                     
                     filtered.forEach(c => {
                         const tr = document.createElement('tr');
-                        // Use (Empty) if text is missing
                         const f = c.f || "(Empty)";
                         const b = c.b || "(Empty)";
-                        
                         tr.innerHTML = `<td><input type="checkbox" class="select-row" value="${c.id}" onchange="app.updateBulkButton()"></td><td><b>${f}</b></td><td>${b}</td><td>${c.cefr||""}</td><td>${c.str}</td><td style="text-align: right;"><button class="btn-sm btn-danger" onclick="app.deleteWord(${c.id})">🗑️</button></td>`;
                         tbody.appendChild(tr);
                     });
@@ -502,7 +497,7 @@
             toggleSelectAll: function() { const isChecked = document.getElementById('select-all').checked; document.querySelectorAll('.select-row').forEach(cb => cb.checked = isChecked); this.updateBulkButton(); },
             updateBulkButton: function() { const count = document.querySelectorAll('.select-row:checked').length; const btn = document.getElementById('bulk-actions'); if (count > 0) { btn.style.display = 'block'; document.getElementById('selected-count').innerText = count; } else { btn.style.display = 'none'; } },
             deleteSelected: function() { const checkedBoxes = document.querySelectorAll('.select-row:checked'); const count = checkedBoxes.length; if (count === 0) return; if (confirm(`Delete ${count} words?`)) { const idsToDelete = Array.from(checkedBoxes).map(cb => parseFloat(cb.value)); this.db = this.db.filter(c => !idsToDelete.includes(c.id)); this.saveToCloud(); this.renderVocabList(); } },
-            setupKeyboard: function() { document.addEventListener('keydown', (e) => { if (!document.getElementById('study').classList.contains('active')) return; if (e.code === 'Space') { this.flipCard(); e.preventDefault(); } else if (e.code === 'ArrowRight') this.answerCard(true); else if (e.code === 'ArrowLeft') this.answerCard(false); }); }
+            setupKeyboard: function() { document.addEventListener('keydown', (e) => { if (!document.getElementById('study').classList.contains('active')) return; if (e.code === 'Space') { this.flipCard(); e.preventDefault(); } else if (e.code === 'ArrowRight') this.answerCard(true); else if (e.code === 'ArrowLeft') this.answerCard(false); }); },
         };
 
         window.addEventListener('DOMContentLoaded', () => app.init());
