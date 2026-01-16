@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pareto German (Real-Time)</title>
+    <title>Pareto German (UI Fix)</title>
     <style>
         :root {
             --primary: #6366f1; --primary-dark: #4f46e5;
@@ -23,36 +23,21 @@
 
         /* Dashboard */
         .dashboard-card { background: var(--card-bg); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); margin-bottom: 20px; text-align: center; position: relative; }
-        
-        .cloud-badge {
-            position: absolute; top: 15px; right: 15px;
-            font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 20px;
-            display: flex; align-items: center; gap: 5px;
-        }
-        .status-syncing { background: #e0f2fe; color: #0284c7; }
-        .status-saved { background: #dcfce7; color: #166534; }
-        .status-error { background: #fee2e2; color: #991b1b; }
+        .cloud-badge { position: absolute; top: 15px; right: 15px; font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px; }
+        .status-syncing { background: #e0f2fe; color: #0284c7; } .status-saved { background: #dcfce7; color: #166534; } .status-error { background: #fee2e2; color: #991b1b; }
 
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
         .stat-box { background: #f9fafb; padding: 12px; border-radius: 12px; border: 1px solid #e5e7eb; }
         .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
         .stat-label { font-size: 0.85rem; color: var(--text-light); }
 
-        /* Split Action Buttons */
+        /* Action Buttons */
         .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-        .btn-big {
-            border: none; padding: 20px 15px; border-radius: 16px; font-size: 1.1rem;
-            font-weight: 700; cursor: pointer; transition: transform 0.1s; color: white;
-            display: flex; flex-direction: column; align-items: center; gap: 5px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; overflow: hidden;
-        }
+        .btn-big { border: none; padding: 20px 15px; border-radius: 16px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: transform 0.1s; color: white; display: flex; flex-direction: column; align-items: center; gap: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
         .btn-big:active { transform: scale(0.98); }
-        .btn-review { background: var(--primary); }
-        .btn-learn { background: var(--secondary); }
-        .btn-big:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; box-shadow: none; }
-        
-        /* High contrast badge */
-        .count-badge { background: white; color: var(--text-main); padding: 4px 10px; border-radius: 20px; font-size: 0.9rem; font-weight: 800; min-width: 30px; }
+        .btn-review { background: var(--primary); } .btn-learn { background: var(--secondary); }
+        .btn-big:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; box-shadow: none; pointer-events: none; } /* Disabled visual fix */
+        .count-badge { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; font-size: 0.9rem; min-width: 20px; }
 
         .btn { background: var(--primary); color: white; border: none; padding: 16px 32px; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 10px; }
         .btn-secondary { background: white; color: var(--text-main); border: 1px solid #e5e7eb; box-shadow: none; margin-top: 5px; padding: 12px; font-size: 1rem; }
@@ -67,7 +52,7 @@
         .tab-btn { flex: 1; padding: 10px; border: none; background: #e5e7eb; border-radius: 8px; cursor: pointer; font-weight: 600; color: #6b7280; }
         .tab-btn.active { background: var(--primary); color: white; }
 
-        /* Scene */
+        /* Scene & Cards */
         .scene { width: 100%; height: 340px; perspective: 1000px; margin: 20px 0; cursor: pointer; }
         @media (max-width: 600px) { .scene { height: 280px; } }
         .card { width: 100%; height: 100%; position: relative; transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1); transform-style: preserve-3d; border-radius: 20px; box-shadow: var(--shadow); }
@@ -76,51 +61,36 @@
         .card-face.back { transform: rotateY(180deg); background: #fff; border: 2px solid var(--primary); }
         .word-main { font-size: 2.5rem; font-weight: 800; color: var(--text-main); margin-bottom: 10px; }
         .word-context { font-style: italic; color: var(--text-light); margin-top: 20px; font-size: 1rem; opacity: 0.8; }
-        
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
         .controls.visible { opacity: 1; pointer-events: auto; }
         .btn-control { padding: 20px; border-radius: 16px; border: none; font-size: 1.1rem; font-weight: 700; cursor: pointer; }
         .btn-fail { background: #fee2e2; color: var(--danger); }
         .btn-pass { background: #dcfce7; color: var(--success); }
 
-        /* Table */
+        /* Table & Misc */
         .table-container { overflow-x: auto; max-height: 60vh; border: 1px solid #e5e7eb; border-radius: 8px; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; background: white; text-align: left; }
         th, td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
         th { background: #f9fafb; font-weight: 600; position: sticky; top: 0; z-index: 5; }
         .search-bar, textarea { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 10px; }
         input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
-        #file-input { display: none; }
-
-        /* Badges */
         .cefr-badge { display: inline-block; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; color: white; }
         .cefr-badge-card { position: absolute; top: 20px; left: 20px; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .cefr-a1 { background-color: #22c55e; } .cefr-a2 { background-color: #10b981; } .cefr-b1 { background-color: #3b82f6; } .cefr-u { background-color: #9ca3af; }
         .audio-container { position: absolute; top: 20px; right: 20px; z-index: 10; }
         .btn-audio { background: rgba(238, 242, 255, 0.8); color: var(--primary); border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-        /* System Log (Bottom of screen) */
-        #system-log { 
-            position: fixed; bottom: 0; left: 0; width: 100%; 
-            background: #1f2937; color: #10b981; font-family: monospace; font-size: 0.75rem;
-            padding: 4px 10px; max-height: 80px; overflow-y: auto; z-index: 5000;
-            border-top: 1px solid #374151; opacity: 0.95; pointer-events: none;
-        }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        #loader {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.9); z-index: 3000; display: none;
-            flex-direction: column; justify-content: center; align-items: center;
-        }
+        /* Log & Loader */
+        #system-log { position: fixed; bottom: 0; left: 0; width: 100%; background: #1f2937; color: #10b981; font-family: monospace; font-size: 0.75rem; padding: 4px 10px; max-height: 80px; overflow-y: auto; z-index: 5000; border-top: 1px solid #374151; opacity: 0.95; pointer-events: none; }
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 3000; display: none; flex-direction: column; justify-content: center; align-items: center; }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-    <div id="system-log">System Ready...</div>
+    <div id="system-log">System Initializing...</div>
     <div id="loader"><div class="spinner"></div><p style="margin-top: 15px; color: #6b7280;">Syncing...</p></div>
 
     <!-- AUTH -->
@@ -148,32 +118,19 @@
         <div id="dashboard" class="screen active">
             <div class="dashboard-card">
                 <div id="cloud-status" class="cloud-badge status-syncing">☁️ Connecting</div>
-                <div style="position: absolute; top: 15px; left: 15px; font-size: 0.8rem; color: #6b7280;">
-                    User: <b id="display-username">...</b> <a href="#" onclick="app.logout()" style="color: var(--danger); margin-left: 5px; text-decoration: none;">(Logout)</a>
-                </div>
-
+                <div style="position: absolute; top: 15px; left: 15px; font-size: 0.8rem; color: #6b7280;">User: <b id="display-username">...</b> <a href="#" onclick="app.logout()" style="color: var(--danger); margin-left: 5px; text-decoration: none;">(Logout)</a></div>
                 <h1 style="margin-bottom: 5px; margin-top: 10px;">🇩🇪 Dashboard</h1>
-                <p style="color: var(--text-light); margin-bottom: 20px;">Pareto Principle: Top 20%</p>
-
-                <!-- SPLIT BUTTONS -->
+                <p style="color: var(--text-light); margin-bottom: 20px;">Pareto Principle</p>
                 <div class="action-grid">
-                    <button id="btn-review" class="btn-big btn-review" onclick="app.startSession('review')">
-                        <span>📚 Reviews Due</span>
-                        <span id="count-review" class="count-badge">0</span>
-                    </button>
-                    
-                    <button id="btn-new" class="btn-big btn-learn" onclick="app.startSession('new')">
-                        <span>✨ New Words</span>
-                        <span id="count-new" class="count-badge">0</span>
-                    </button>
+                    <!-- Disabled by default to prevent confusion -->
+                    <button id="btn-review" class="btn-big btn-review" disabled onclick="app.startSession('review')"><span>📚 Reviews</span><span id="count-review" class="count-badge">0</span></button>
+                    <button id="btn-new" class="btn-big btn-learn" disabled onclick="app.startSession('new')"><span>✨ New Words</span><span id="count-new" class="count-badge">0</span></button>
                 </div>
-
                 <div class="stats-grid">
                     <div class="stat-box"><div class="stat-value" id="stat-total">0</div><div class="stat-label">Total Words</div></div>
                     <div class="stat-box"><div class="stat-value" id="stat-learned">0</div><div class="stat-label">Learned</div></div>
                 </div>
             </div>
-
             <div class="dashboard-card" style="padding: 16px;">
                 <h3 style="margin-bottom: 12px;">Tools</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -184,7 +141,6 @@
             </div>
         </div>
 
-        <!-- STUDY -->
         <div id="study" class="screen">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <span style="font-weight: 600; color: var(--text-light);"><span id="session-mode-label">Review</span>: <span id="session-counter">1</span>/50</span>
@@ -210,7 +166,6 @@
             </div>
         </div>
 
-        <!-- VOCAB & IMPORT -->
         <div id="vocab" class="screen">
             <div class="dashboard-card" style="text-align: left; padding: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;"><h2>List</h2><button class="btn btn-sm btn-secondary" onclick="app.goHome()">Back</button></div>
@@ -234,7 +189,6 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // === USER'S LIVE CONFIG ===
         const firebaseConfig = {
             apiKey: "AIzaSyABm29aJZQcCipXiBrnASs2sq6cGfDn3u8",
             authDomain: "flashcards-a3b48.firebaseapp.com",
@@ -264,7 +218,7 @@
                             this.userId = savedUser;
                             this.completeLogin(savedUser);
                         } else {
-                            this.log("Waiting for Login...");
+                            document.getElementById('loader').style.display = 'none';
                         }
                     }
                 });
@@ -310,7 +264,7 @@
                 document.getElementById('auth-modal').style.display = 'none';
                 document.getElementById('app-container').classList.add('authenticated');
                 document.getElementById('display-username').textContent = username;
-                this.subscribeToCloud(); // Start Live Sync
+                this.subscribeToCloud();
             },
 
             logout: function() { localStorage.removeItem('pareto_username'); location.reload(); },
@@ -321,20 +275,16 @@
                 this.log(`Syncing as: ${this.userId}`);
                 
                 const docRef = doc(this.firestore, 'users', this.userId, 'flashcards', 'main');
-                // Use onSnapshot for live updates (Mobile <-> Desktop)
                 this.unsubscribe = onSnapshot(docRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         this.db = data.cards || [];
-                        this.log(`Loaded ${this.db.length} cards from Cloud.`);
-                        // Auto-Repair Data (Missing status?)
-                        let fixes = 0;
-                        this.db.forEach(c => { if(!c.s){ c.s='new'; fixes++; } });
-                        if(fixes > 0) this.log(`Repaired ${fixes} cards.`);
-                        
-                        this.updateDashboard();
+                        this.log(`Data Sync: Received ${this.db.length} cards.`);
+                        this.updateDashboard(); // CRITICAL CALL
                     } else {
                         this.log("No cloud data found.");
+                        this.db = [];
+                        this.updateDashboard();
                     }
                     this.showStatus('saved');
                 }, (error) => {
@@ -349,7 +299,6 @@
                 try {
                     const docRef = doc(this.firestore, 'users', this.userId, 'flashcards', 'main');
                     await setDoc(docRef, { cards: this.db, updated: new Date().toISOString() });
-                    // No need to log "Saved" here, the onSnapshot listener will trigger and log "Loaded"
                 } catch (error) { this.log("Save Failed: " + error.message); }
             },
 
@@ -368,23 +317,45 @@
 
             resetData: function() { if(confirm("DELETE all data?")) { this.db = []; this.saveToCloud(); } },
 
-            // --- APP ---
+            // --- DASHBOARD (CRASH PROOF) ---
             updateDashboard: function() {
-                const now = Date.now();
-                const reviews = this.db.filter(c => c.s === 'active' && c.due <= now).length;
-                const newWords = this.db.filter(c => c.s === 'new').length;
-                const learned = this.db.filter(c => c.s === 'active' && c.str > 0).length;
+                try {
+                    const now = Date.now();
+                    
+                    // Calculation Safety Checks
+                    let reviews = 0, newWords = 0, learned = 0;
+                    
+                    if (this.db && Array.isArray(this.db)) {
+                        reviews = this.db.filter(c => c.s === 'active' && c.due <= now).length;
+                        newWords = this.db.filter(c => c.s === 'new').length;
+                        learned = this.db.filter(c => c.s === 'active' && c.str > 0).length;
+                    }
 
-                document.getElementById('stat-total').textContent = this.db.length;
-                document.getElementById('stat-due').textContent = reviews;
-                document.getElementById('stat-new').textContent = newWords;
-                document.getElementById('stat-learned').textContent = learned;
-                
-                document.getElementById('count-review').textContent = reviews;
-                document.getElementById('count-new').textContent = newWords;
-                
-                document.getElementById('btn-review').disabled = (reviews === 0);
-                document.getElementById('btn-new').disabled = (newWords === 0);
+                    // Log Logic for Debugging
+                    this.log(`UI Update: Rev=${reviews}, New=${newWords}, Total=${this.db.length}`);
+
+                    // Safe DOM Updates
+                    const setText = (id, val) => {
+                        const el = document.getElementById(id);
+                        if(el) el.textContent = val;
+                    };
+
+                    setText('stat-total', this.db.length);
+                    setText('stat-learned', learned);
+                    
+                    setText('count-review', reviews);
+                    setText('count-new', newWords);
+                    
+                    const btnReview = document.getElementById('btn-review');
+                    if(btnReview) btnReview.disabled = (reviews === 0);
+                    
+                    const btnNew = document.getElementById('btn-new');
+                    if(btnNew) btnNew.disabled = (newWords === 0);
+
+                } catch (e) {
+                    console.error("Dashboard Error:", e);
+                    this.log("UI Error: " + e.message);
+                }
             },
 
             processImport: function() {
