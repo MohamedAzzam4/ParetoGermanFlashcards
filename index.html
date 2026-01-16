@@ -3,90 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pareto German (Goal Fixed)</title>
+    <title>Pareto German (Library Edition)</title>
     <style>
         :root {
             --primary: #6366f1; --primary-dark: #4f46e5;
             --secondary: #ec4899; --secondary-dark: #db2777;
             --bg: #f3f4f6; --card-bg: #ffffff;
             --text-main: #1f2937; --text-light: #6b7280;
-            --success: #22c55e; --danger: #ef4444;
-            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --success: #22c55e; --warning: #f59e0b; --danger: #ef4444;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-        body { background-color: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background: var(--bg); color: var(--text-main); padding: 20px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
         
-        .container { width: 100%; max-width: 800px; filter: blur(5px); pointer-events: none; transition: filter 0.3s; }
+        .container { width: 100%; max-width: 900px; filter: blur(5px); pointer-events: none; transition: filter 0.3s; }
         .container.authenticated { filter: none; pointer-events: auto; }
-        .screen { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .screen { display: none; animation: fadeIn 0.3s; }
         .screen.active { display: block; }
 
-        /* Dashboard */
-        .dashboard-card { background: var(--card-bg); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); margin-bottom: 20px; text-align: center; position: relative; }
-        .cloud-badge { position: absolute; top: 15px; right: 15px; font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px; }
-        .status-syncing { background: #e0f2fe; color: #0284c7; } .status-saved { background: #dcfce7; color: #166534; } .status-error { background: #fee2e2; color: #991b1b; }
-
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
-        .stat-box { background: #f9fafb; padding: 12px; border-radius: 12px; border: 1px solid #e5e7eb; }
-        .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
-        .stat-label { font-size: 0.85rem; color: var(--text-light); }
+        /* --- Global Dashboard --- */
+        .hero-section {
+            background: white; border-radius: 20px; padding: 25px; 
+            margin-bottom: 30px; text-align: center; 
+            box-shadow: var(--shadow); border: 1px solid #e5e7eb; position: relative;
+        }
         
-        /* CLICKABLE GOAL BOX */
-        .stat-box.clickable { cursor: pointer; transition: background 0.2s; border: 2px dashed #cbd5e1; }
-        .stat-box.clickable:hover { background: #e0e7ff; border-color: var(--primary); }
+        /* Cloud Status Badge */
+        .cloud-badge {
+            position: absolute; top: 15px; right: 15px;
+            font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .status-syncing { background: #e0f2fe; color: #0284c7; }
+        .status-saved { background: #dcfce7; color: #166534; }
+        .status-error { background: #fee2e2; color: #991b1b; }
 
-        /* Action Buttons */
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-        .btn-big { border: none; padding: 20px 15px; border-radius: 16px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: transform 0.1s; color: white; display: flex; flex-direction: column; align-items: center; gap: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
-        .btn-big:active { transform: scale(0.98); }
-        .btn-review { background: var(--primary); } .btn-learn { background: var(--secondary); }
-        .btn-big:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; box-shadow: none; }
-        .count-badge { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; font-size: 0.9rem; min-width: 20px; }
+        .hero-title { margin-bottom: 10px; font-size: 1.5rem; color: var(--text-main); font-weight: 800; }
+        
+        /* Goal Progress Bar */
+        .goal-container { margin: 15px 0 25px 0; cursor: pointer; }
+        .progress-bar { height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden; position: relative; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); width: 0%; transition: width 0.5s; }
+        .goal-text { font-size: 0.85rem; color: var(--text-light); margin-top: 5px; display: flex; justify-content: space-between; }
 
-        .btn { background: var(--primary); color: white; border: none; padding: 16px 32px; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 10px; }
-        .btn-secondary { background: white; color: var(--text-main); border: 1px solid #e5e7eb; box-shadow: none; margin-top: 5px; padding: 12px; font-size: 1rem; }
-        .btn-sm { padding: 8px 12px; font-size: 0.9rem; width: auto; display: inline-block; }
+        .global-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        .btn-global {
+            border: none; padding: 15px; border-radius: 16px; 
+            font-size: 1rem; font-weight: 700; cursor: pointer; color: white;
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.1s;
+        }
+        .btn-global:active { transform: scale(0.98); }
+        .btn-global:disabled { background: #e5e7eb; color: #9ca3af; box-shadow: none; cursor: default; }
+        
+        .bg-review { background: var(--primary); }
+        .bg-new { background: var(--secondary); }
+        .badge-count { background: rgba(255,255,255,0.25); padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; }
+
+        /* --- Deck Grid --- */
+        .deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        
+        .deck-card {
+            background: white; border-radius: 16px; padding: 20px;
+            box-shadow: var(--shadow); transition: all 0.2s; border: 1px solid #e5e7eb;
+            cursor: pointer; position: relative; overflow: hidden;
+        }
+        .deck-card:hover { transform: translateY(-3px); border-color: var(--primary); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        
+        .status-bar { height: 4px; width: 100%; position: absolute; top: 0; left: 0; }
+        .status-active { background: var(--warning); }
+        .status-done { background: var(--success); }
+
+        .deck-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
+        .deck-title { font-weight: 700; font-size: 1.2rem; }
+        .deck-count { font-size: 0.85rem; color: var(--text-light); background: #f3f4f6; padding: 4px 8px; border-radius: 6px; }
+
+        .deck-info { font-size: 0.9rem; font-weight: 600; color: var(--text-light); }
+        .highlight-due { color: var(--warning); font-weight: 800; }
+        .highlight-new { color: var(--secondary); font-weight: 800; }
+        .highlight-done { color: var(--success); font-weight: 800; }
+
+        /* --- Forms & Inputs --- */
+        .dashboard-card { background: white; border-radius: 16px; padding: 24px; box-shadow: var(--shadow); margin-bottom: 20px; }
+        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; font-weight: 600; }
+        .btn-secondary { background: white; color: var(--text-main); border: 1px solid #e5e7eb; }
+        .btn-sm { padding: 6px 12px; font-size: 0.9rem; width: auto; }
         .btn-danger { color: var(--danger); border-color: #fee2e2; background: #fef2f2; }
-        .btn-warning { color: #b45309; border-color: #fcd34d; background: #fffbeb; }
+        
+        input, textarea, select { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 10px; font-family: inherit; }
+        label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: var(--text-light); }
 
-        /* Auth */
+        /* --- Auth Modal --- */
         #auth-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(243, 244, 246, 0.98); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .auth-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); width: 90%; max-width: 400px; text-align: center; }
-        .auth-input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 1rem; outline: none; }
         .tab-group { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab-btn { flex: 1; padding: 10px; border: none; background: #e5e7eb; border-radius: 8px; cursor: pointer; font-weight: 600; color: #6b7280; }
         .tab-btn.active { background: var(--primary); color: white; }
 
-        /* Scene & Cards */
-        .scene { width: 100%; height: 340px; perspective: 1000px; margin: 20px 0; cursor: pointer; }
+        /* --- Study Scene --- */
+        .scene { width: 100%; height: 320px; perspective: 1000px; margin: 20px 0; cursor: pointer; }
         @media (max-width: 600px) { .scene { height: 280px; } }
-        .card { width: 100%; height: 100%; position: relative; transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1); transform-style: preserve-3d; border-radius: 20px; box-shadow: var(--shadow); }
+        .card { width: 100%; height: 100%; position: relative; transition: transform 0.6s; transform-style: preserve-3d; }
         .card.is-flipped { transform: rotateY(180deg); }
-        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; background: var(--card-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px; text-align: center; }
-        .card-face.back { transform: rotateY(180deg); background: #fff; border: 2px solid var(--primary); }
-        .word-main { font-size: 2.5rem; font-weight: 800; color: var(--text-main); margin-bottom: 10px; }
-        .word-context { font-style: italic; color: var(--text-light); margin-top: 20px; font-size: 1rem; opacity: 0.8; }
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 20px; box-shadow: var(--shadow); padding: 20px; text-align: center; }
+        .face.back { transform: rotateY(180deg); border: 2px solid var(--primary); }
+        .word-main { font-size: 2rem; font-weight: 800; color: var(--text-main); margin-bottom: 10px; }
+        .word-context { font-style: italic; color: var(--text-light); font-size: 1rem; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; opacity: 0; pointer-events: none; }
         .controls.visible { opacity: 1; pointer-events: auto; }
-        .btn-control { padding: 20px; border-radius: 16px; border: none; font-size: 1.1rem; font-weight: 700; cursor: pointer; }
-        .btn-fail { background: #fee2e2; color: var(--danger); }
-        .btn-pass { background: #dcfce7; color: var(--success); }
 
-        /* Table & Misc */
+        /* --- Table --- */
         .table-container { overflow-x: auto; max-height: 60vh; border: 1px solid #e5e7eb; border-radius: 8px; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; background: white; text-align: left; }
         th, td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
-        th { background: #f9fafb; font-weight: 600; position: sticky; top: 0; z-index: 5; }
-        .search-bar, textarea { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 10px; }
-        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
+        th { background: #f9fafb; font-weight: 600; position: sticky; top: 0; }
+        
+        /* Utils */
         .cefr-badge { display: inline-block; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; color: white; }
         .cefr-badge-card { position: absolute; top: 20px; left: 20px; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .cefr-a1 { background-color: #22c55e; } .cefr-a2 { background-color: #10b981; } .cefr-b1 { background-color: #3b82f6; } .cefr-u { background-color: #9ca3af; }
         .audio-container { position: absolute; top: 20px; right: 20px; z-index: 10; }
         .btn-audio { background: rgba(238, 242, 255, 0.8); color: var(--primary); border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-        /* Log & Loader */
-        #system-log { position: fixed; bottom: 0; left: 0; width: 100%; background: #1f2937; color: #10b981; font-family: monospace; font-size: 0.75rem; padding: 4px 10px; max-height: 80px; overflow-y: auto; z-index: 5000; border-top: 1px solid #374151; opacity: 0.95; pointer-events: none; }
+        /* Loader */
         #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 3000; display: none; flex-direction: column; justify-content: center; align-items: center; }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -95,8 +135,7 @@
 </head>
 <body>
 
-    <div id="system-log">System Initializing...</div>
-    <div id="loader"><div class="spinner"></div><p style="margin-top: 15px; color: #6b7280;">Syncing...</p></div>
+    <div id="loader"><div class="spinner"></div><p style="margin-top: 15px; color: #6b7280;">Connecting...</p></div>
 
     <!-- AUTH -->
     <div id="auth-modal">
@@ -104,93 +143,177 @@
             <h1 style="margin-bottom: 20px;">🇩🇪 Login</h1>
             <div class="tab-group"><button class="tab-btn active" onclick="app.switchAuthTab('login')">Login</button><button class="tab-btn" onclick="app.switchAuthTab('register')">Register</button></div>
             <div id="login-form">
-                <input type="text" id="login-user" class="auth-input" placeholder="Username" onkeypress="app.handleEnter(event, 'login')">
-                <input type="password" id="login-pin" class="auth-input" placeholder="PIN" onkeypress="app.handleEnter(event, 'login')">
+                <input type="text" id="login-user" placeholder="Username" onkeypress="app.handleEnter(event, 'login')">
+                <input type="password" id="login-pin" placeholder="PIN" onkeypress="app.handleEnter(event, 'login')">
                 <button class="btn" onclick="app.login()">Login & Sync</button>
             </div>
             <div id="register-form" style="display: none;">
-                <input type="text" id="reg-user" class="auth-input" placeholder="New Username" onkeypress="app.handleEnter(event, 'register')">
-                <input type="password" id="reg-pin" class="auth-input" placeholder="Create PIN" onkeypress="app.handleEnter(event, 'register')">
+                <input type="text" id="reg-user" placeholder="New Username" onkeypress="app.handleEnter(event, 'register')">
+                <input type="password" id="reg-pin" placeholder="Create PIN" onkeypress="app.handleEnter(event, 'register')">
                 <p id="reg-error" style="color: var(--danger); font-size: 0.9rem; margin-bottom: 5px;"></p>
                 <button class="btn" onclick="app.register()">Create Account</button>
             </div>
         </div>
     </div>
 
-    <!-- APP -->
+    <!-- APP CONTAINER -->
     <div id="app-container" class="container">
         
-        <div id="dashboard" class="screen active">
-            <div class="dashboard-card">
+        <!-- LIBRARY DASHBOARD -->
+        <div id="library" class="screen active">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2 style="margin: 0;">🇩🇪 Library</h2>
+                <div style="font-size: 0.85rem; color: #6b7280;">
+                    User: <b id="display-username">...</b> <a href="#" onclick="app.logout()" style="color: var(--danger); margin-left: 5px;">(Logout)</a>
+                </div>
+            </div>
+
+            <!-- Global Review Hero -->
+            <div class="hero-section">
                 <div id="cloud-status" class="cloud-badge status-syncing">☁️ Connecting</div>
-                <div style="position: absolute; top: 15px; left: 15px; font-size: 0.8rem; color: #6b7280;">User: <b id="display-username">...</b> <a href="#" onclick="app.logout()" style="color: var(--danger); margin-left: 5px; text-decoration: none;">(Logout)</a></div>
-                <h1 style="margin-bottom: 5px; margin-top: 10px;">🇩🇪 Dashboard</h1>
-                <p style="color: var(--text-light); margin-bottom: 20px;">Pareto Principle</p>
-                <div class="action-grid">
-                    <button id="btn-review" class="btn-big btn-review" disabled onclick="app.startSession('review')"><span>📚 Reviews</span><span id="count-review" class="count-badge">0</span></button>
-                    <button id="btn-new" class="btn-big btn-learn" disabled onclick="app.startSession('new')"><span>✨ New Words</span><span id="count-new" class="count-badge">0</span></button>
+                <div class="hero-title">Daily Focus</div>
+                
+                <!-- Goal Progress -->
+                <div class="goal-container" onclick="app.editGoal()" title="Tap to edit goal">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <span style="font-weight:700;">Progress</span>
+                        <span style="font-weight:700;"><span id="goal-learned">0</span> / <span id="goal-target">1000</span></span>
+                    </div>
+                    <div class="progress-bar"><div id="total-progress" class="progress-fill"></div></div>
+                    <div class="goal-text"><span>Learned words</span><span>Target 🎯</span></div>
                 </div>
-                <div class="stats-grid">
-                    <div class="stat-box"><div class="stat-value" id="stat-total">0</div><div class="stat-label">Total Words</div></div>
-                    <div class="stat-box"><div class="stat-value" id="stat-learned">0</div><div class="stat-label">Learned</div></div>
-                    <div class="stat-box"><div class="stat-value" id="stat-new">0</div><div class="stat-label">New Available</div></div>
-                    <!-- GOAL BOX: Explicitly clickable -->
-                    <div class="stat-box clickable" onclick="app.editGoal()"><div class="stat-value" id="stat-goal">1000</div><div class="stat-label">🎯 Goal (Tap to Edit)</div></div>
+
+                <div class="global-actions">
+                    <button id="btn-global-review" class="btn-global bg-review" onclick="app.startSession('global_review', null)">
+                        <span>📚 Review All</span>
+                        <span id="global-due-count" class="badge-count">0</span>
+                    </button>
+                    <button id="btn-global-new" class="btn-global bg-new" onclick="app.startSession('global_new', null)">
+                        <span>✨ New Words</span>
+                        <span id="global-new-count" class="badge-count">0</span>
+                    </button>
                 </div>
             </div>
-            <div class="dashboard-card" style="padding: 16px;">
-                <h3 style="margin-bottom: 12px;">Tools</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <button class="btn btn-secondary" onclick="app.showVocabList()">📖 View List</button>
-                    <button class="btn btn-secondary" onclick="app.showImport()">📥 Add Words</button>
+
+            <!-- Toolbar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3>📂 My Decks</h3>
+                <div>
+                    <button class="btn-sm btn-secondary" onclick="app.showVocabList()">📝 Edit List</button>
+                    <button class="btn-sm btn-secondary" onclick="app.showImport()">➕ Add Deck</button>
                 </div>
-                <button class="btn btn-secondary btn-warning" style="margin-top:10px;" onclick="app.runDiagnostics()">🛠️ Fix Database (Ghost Words)</button>
-                <button class="btn btn-secondary btn-danger" style="margin-top:5px;" onclick="app.resetData()">🗑️ Reset Data</button>
             </div>
+
+            <!-- Deck List -->
+            <div id="deck-list" class="deck-grid">
+                <!-- Decks injected here -->
+            </div>
+            
+            <button class="btn-sm btn-secondary" style="margin-top: 30px; width: 100%; color: #9ca3af;" onclick="app.runDiagnostics()">🛠️ Fix Data Issues</button>
         </div>
 
+        <!-- STUDY SCREEN -->
         <div id="study" class="screen">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <span style="font-weight: 600; color: var(--text-light);"><span id="session-mode-label">Review</span>: <span id="session-counter">1</span>/50</span>
-                <button onclick="app.goHome()" style="background:none; border:none; color: var(--text-light); cursor:pointer;">Exit</button>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-light); font-weight: 600;"><span id="deck-label">General</span>: <span id="card-counter">1</span></span>
+                <button onclick="app.goHome()" style="background:none; border:none; cursor:pointer;">Exit</button>
             </div>
+
             <div class="scene" onclick="app.flipCard()">
                 <div class="card" id="card-element">
-                    <div class="card-face front">
+                    <div class="face front">
                         <div id="card-cefr-badge" class="cefr-badge-card cefr-u">A1</div>
                         <div class="audio-container"><button class="btn-audio" onclick="app.speakWord(event)">🔊</button></div>
-                        <div class="word-main" id="card-front-text">...</div>
-                        <div class="tap-hint">Tap to Flip</div>
+                        <div class="word-main" id="front-text">...</div>
+                        <small style="color:#9ca3af; margin-top:10px;">Tap to flip</small>
                     </div>
-                    <div class="card-face back">
-                        <div class="word-main" id="card-back-text">...</div>
-                        <div class="word-context" id="card-context-text"></div>
+                    <div class="face back">
+                        <div class="word-main" id="back-text">...</div>
+                        <div id="context-text" class="word-context"></div>
                     </div>
                 </div>
             </div>
+
             <div class="controls" id="controls-area">
-                <button class="btn-control btn-fail" onclick="app.answerCard(false)">❌ Forgot</button>
-                <button class="btn-control btn-pass" onclick="app.answerCard(true)">✅ I Know It</button>
+                <button class="btn" style="background:#fee2e2; color:#ef4444;" onclick="app.answerCard(false)">Again</button>
+                <button class="btn" style="background:#dcfce7; color:#166534;" onclick="app.answerCard(true)">Good</button>
             </div>
         </div>
 
-        <div id="vocab" class="screen">
-            <div class="dashboard-card" style="text-align: left; padding: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;"><h2>List</h2><button class="btn btn-sm btn-secondary" onclick="app.goHome()">Back</button></div>
-                <input type="text" id="search-input" class="search-bar" placeholder="Search..." onkeyup="app.renderVocabList()">
-                <div id="bulk-actions" style="margin-bottom: 10px; display: none;"><button class="btn btn-sm btn-danger" onclick="app.deleteSelected()">🗑️ Delete (<span id="selected-count">0</span>)</button></div>
-                <div class="table-container"><table><thead><tr><th style="width: 40px;"><input type="checkbox" id="select-all" onclick="app.toggleSelectAll()"></th><th>Word</th><th>Meaning</th><th>Lvl</th><th>Act</th></tr></thead><tbody id="vocab-table-body"></tbody></table></div>
-                <p id="table-count" style="margin-top: 10px; color: var(--text-light); font-size: 0.9rem;"></p>
+        <!-- VIEW LIST (WITH EDIT) -->
+        <div id="list-view" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 id="list-title">All Words</h3>
+                <button class="btn-sm btn-secondary" onclick="app.goHome()">Back</button>
             </div>
+            <input type="text" id="search-input" placeholder="Search..." onkeyup="app.renderVocabList()">
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>German</th><th>English</th><th>Deck</th><th>Act</th></tr></thead>
+                    <tbody id="vocab-table-body"></tbody>
+                </table>
+            </div>
+            <p id="table-count" style="margin-top: 10px; color: var(--text-light); font-size: 0.9rem;"></p>
         </div>
 
-        <div id="import" class="screen">
+        <!-- EDIT WORD MODAL (New) -->
+        <div id="edit-screen" class="screen">
             <div class="dashboard-card">
-                <h2>Add Words</h2>
-                <textarea id="import-area" rows="10" placeholder='der Hund, "the dog", Der Hund ist schnell, A1'></textarea>
-                <div style="display: flex; gap: 10px; margin-top: 10px;"><button class="btn" onclick="app.processImport()">Save</button><button class="btn btn-secondary" onclick="app.goHome()">Cancel</button></div>
+                <h2>✏️ Edit Word</h2>
+                <input type="hidden" id="edit-id">
+                
+                <label>German Entry</label>
+                <input type="text" id="edit-f">
+                
+                <label>English Meaning</label>
+                <input type="text" id="edit-b">
+                
+                <label>Context / Examples</label>
+                <textarea id="edit-c" rows="3"></textarea>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div>
+                        <label>CEFR Level</label>
+                        <select id="edit-cefr">
+                            <option value="A1">A1</option><option value="A2">A2</option>
+                            <option value="B1">B1</option><option value="B2">B2</option>
+                            <option value="C1">C1</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Deck Name</label>
+                        <input type="text" id="edit-deck" list="deck-suggestions">
+                        <datalist id="deck-suggestions"></datalist>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button class="btn" onclick="app.saveWordEdit()">Save Changes</button>
+                    <button class="btn btn-secondary" onclick="app.showVocabList()">Cancel</button>
+                </div>
+                <button class="btn-sm btn-danger" style="margin-top:20px; width:auto;" onclick="app.deleteWordFromEdit()">🗑️ Delete Word</button>
             </div>
         </div>
+
+        <!-- IMPORT SCREEN -->
+        <div id="import" class="screen">
+            <div class="dashboard-card" style="text-align: left;">
+                <h2 style="text-align: center;">Add Cards</h2>
+                <label>Deck Name:</label>
+                <input type="text" id="import-deck-name" placeholder="e.g. Lesson 1" value="General">
+                
+                <label>Words (CSV Format):</label>
+                <p style="font-size:0.8rem; color:#6b7280; margin-bottom:5px;">German, "English", Context, CEFR</p>
+                <textarea id="import-text" rows="8" placeholder='der Hund, "the dog", Der Hund ist schnell, A1'></textarea>
+                
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="btn" onclick="app.processImport()">Save Cards</button>
+                    <button class="btn btn-secondary" onclick="app.goHome()">Cancel</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script type="module">
@@ -198,7 +321,7 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // === USER'S LIVE CONFIG ===
+        // === FIREBASE CONFIG ===
         const firebaseConfig = {
             apiKey: "AIzaSyABm29aJZQcCipXiBrnASs2sq6cGfDn3u8",
             authDomain: "flashcards-a3b48.firebaseapp.com",
@@ -211,26 +334,20 @@
         
         window.app = {
             db: [], firestore: null, userId: null, unsubscribe: null,
-            sessionQueue: [], currentCardIdx: null, intervals: [1, 3, 7, 14, 30], batchSize: 50, voices: [],
-            goal: 1000,
+            sessionQueue: [], currentCardIdx: 0, intervals: [1, 3, 7, 14, 30], batchSize: 50, voices: [], goal: 1000,
 
             init: async function() {
                 const firebaseApp = initializeApp(firebaseConfig);
                 const auth = getAuth(firebaseApp);
                 this.firestore = getFirestore(firebaseApp);
-                this.log("Connecting...");
 
                 await signInAnonymously(auth);
 
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         const savedUser = localStorage.getItem('pareto_username');
-                        if (savedUser) {
-                            this.userId = savedUser;
-                            this.completeLogin(savedUser);
-                        } else {
-                            document.getElementById('loader').style.display = 'none';
-                        }
+                        if (savedUser) { this.userId = savedUser; this.completeLogin(savedUser); } 
+                        else { document.getElementById('loader').style.display = 'none'; }
                     }
                 });
 
@@ -255,7 +372,7 @@
                     const snap = await getDoc(docRef);
                     if (snap.exists()) alert("Username taken!");
                     else { await setDoc(docRef, { pin: pin, created: new Date().toISOString() }); this.completeLogin(user); }
-                } catch (e) { this.log("Error: " + e.message); }
+                } catch (e) { alert("Connection Error"); }
             },
 
             login: async function() {
@@ -266,7 +383,7 @@
                     const snap = await getDoc(docRef);
                     if (snap.exists() && snap.data().pin == pin) this.completeLogin(user);
                     else alert("Wrong User or PIN");
-                } catch (e) { this.log("Error: " + e.message); }
+                } catch (e) { alert("Connection Error"); }
             },
 
             completeLogin: function(username) {
@@ -280,44 +397,19 @@
 
             logout: function() { localStorage.removeItem('pareto_username'); location.reload(); },
 
-            // --- REALTIME CLOUD LISTENER ---
+            // --- CLOUD SYNC ---
             subscribeToCloud: function() {
                 if (!this.firestore || !this.userId) return;
-                this.log(`Syncing as: ${this.userId}`);
-                
                 const docRef = doc(this.firestore, 'users', this.userId, 'flashcards', 'main');
                 this.unsubscribe = onSnapshot(docRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         this.db = data.cards || [];
                         this.goal = data.goal || 1000;
-                        this.log(`Data Sync: Received ${this.db.length} cards.`);
-                        this.updateDashboard(); 
-                    } else {
-                        this.log("No cloud data found.");
-                        this.db = [];
-                        this.updateDashboard();
+                        this.renderLibrary();
                     }
                     this.showStatus('saved');
-                }, (error) => {
-                    this.log("Sync Error: " + error.message);
-                    this.showStatus('error');
-                });
-            },
-
-            // --- THE FIXER FUNCTION ---
-            runDiagnostics: function() {
-                if(!this.db || this.db.length === 0) { alert("Database is empty. Nothing to fix."); return; }
-                let fixedCount = 0;
-                this.db.forEach(c => {
-                    let dirty = false;
-                    if (!c.s || (c.s !== 'new' && c.s !== 'active')) { c.s = 'new'; dirty = true; }
-                    if (!c.due || isNaN(c.due)) { c.due = 0; dirty = true; }
-                    if (!c.str || isNaN(c.str)) { c.str = 0; dirty = true; }
-                    if(dirty) fixedCount++;
-                });
-                if(fixedCount > 0) { this.saveToCloud(); alert(`✅ Fixed ${fixedCount} broken words! Check the dashboard now.`); }
-                else { alert("Database looks healthy! No issues found."); }
+                }, (error) => this.showStatus('error'));
             },
 
             saveToCloud: async function() {
@@ -326,21 +418,7 @@
                 try {
                     const docRef = doc(this.firestore, 'users', this.userId, 'flashcards', 'main');
                     await setDoc(docRef, { cards: this.db, goal: this.goal, updated: new Date().toISOString() });
-                } catch (error) { this.log("Save Failed: " + error.message); }
-            },
-
-            editGoal: function() {
-                const g = prompt("Set your learning goal (e.g., 1000):", this.goal);
-                if (g && !isNaN(g)) {
-                    this.goal = parseInt(g);
-                    this.saveToCloud();
-                }
-            },
-
-            log: function(msg) {
-                const box = document.getElementById('system-log');
-                box.innerText = msg;
-                console.log(msg);
+                } catch (error) { this.showStatus('error'); }
             },
 
             showStatus: function(status) {
@@ -350,101 +428,146 @@
                 else { el.className = 'cloud-badge status-error'; el.innerText = '⚠️ Error'; }
             },
 
-            resetData: function() { if(confirm("DELETE all data?")) { this.db = []; this.saveToCloud(); } },
+            // --- LIBRARY UI ---
+            renderLibrary: function() {
+                const now = Date.now();
+                const deckListEl = document.getElementById('deck-list');
+                deckListEl.innerHTML = '';
 
-            // --- DASHBOARD ---
-            updateDashboard: function() {
-                try {
-                    const now = Date.now();
-                    let reviews = 0, newWords = 0, learned = 0;
-                    if (this.db && Array.isArray(this.db)) {
-                        reviews = this.db.filter(c => c.s === 'active' && c.due <= now).length;
-                        newWords = this.db.filter(c => c.s === 'new').length;
-                        learned = this.db.filter(c => c.s === 'active' && c.str > 0).length;
-                    }
-                    this.log(`UI Update: Rev=${reviews}, New=${newWords}, Total=${this.db.length}`);
-                    const setText = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
-                    setText('stat-total', this.db.length);
-                    setText('stat-learned', learned);
-                    setText('stat-due', reviews);
-                    setText('stat-new', newWords);
-                    setText('stat-goal', this.goal || 1000); 
-                    setText('count-review', reviews);
-                    setText('count-new', newWords);
-                    const btnReview = document.getElementById('btn-review'); if(btnReview) btnReview.disabled = (reviews === 0);
-                    const btnNew = document.getElementById('btn-new'); if(btnNew) btnNew.disabled = (newWords === 0);
-                } catch (e) { console.error("Dashboard Error:", e); this.log("UI Error: " + e.message); }
-            },
+                // Group Data
+                const decks = {};
+                let globalDue = 0; let globalNew = 0; let globalLearned = 0;
 
-            processImport: function() {
-                const txt = document.getElementById('import-area').value;
-                if (!txt.trim()) return;
-                const lines = txt.split(/[\n\r]+/);
-                let added = 0;
-                lines.forEach(line => {
-                    line = line.trim(); if(!line) return;
-                    const parts = []; let current = ''; let inQuote = false;
-                    for (let i = 0; i < line.length; i++) {
-                        const char = line[i]; if (char === '"') { inQuote = !inQuote; current += char; } else if (char === ',' && !inQuote) { parts.push(current); current = ''; } else { current += char; }
+                this.db.forEach(card => {
+                    // Default deck if missing
+                    if (!card.deck) card.deck = "General"; 
+                    const dName = card.deck;
+                    
+                    if (!decks[dName]) decks[dName] = { total: 0, due: 0, new: 0, nextReview: Infinity };
+                    decks[dName].total++;
+                    
+                    if (card.s === 'new') {
+                        decks[dName].new++; globalNew++;
+                    } else if (card.s === 'active' && card.due <= now) {
+                        decks[dName].due++; globalDue++;
+                    } else if (card.s === 'active' && card.due > now) {
+                        if (card.due < decks[dName].nextReview) decks[dName].nextReview = card.due;
                     }
-                    parts.push(current);
-                    if (parts.length >= 2) {
-                        const clean = (s) => s ? s.trim().replace(/^"|"$/g, '') : "";
-                        const f = clean(parts[0]); const b = clean(parts[1]); const c = parts[2] ? clean(parts[2]) : ""; const cefr = parts[3] ? clean(parts[3]) : "";
-                        const exists = this.db.some(card => card.f.toLowerCase() === f.toLowerCase() && card.b.toLowerCase() === b.toLowerCase());
-                        if (!exists && f && b) { this.db.push({ id: Date.now()+Math.random(), f: f, b: b, c: c, cefr: cefr, s: 'new', str: 0, due: 0 }); added++; }
-                    }
+                    
+                    if (card.s === 'active' && card.str > 0) globalLearned++;
                 });
-                this.log(`Imported ${added} words.`);
-                document.getElementById('import-area').value = ""; this.saveToCloud(); this.goHome();
+
+                // Update Hero Stats
+                document.getElementById('global-due-count').textContent = globalDue;
+                document.getElementById('global-new-count').textContent = globalNew;
+                document.getElementById('btn-global-review').disabled = (globalDue === 0);
+                document.getElementById('btn-global-new').disabled = (globalNew === 0);
+                
+                // Update Goal
+                document.getElementById('goal-learned').textContent = globalLearned;
+                document.getElementById('goal-target').textContent = this.goal;
+                const pct = Math.min(100, (globalLearned / this.goal) * 100);
+                document.getElementById('total-progress').style.width = pct + "%";
+
+                // Render Decks
+                Object.keys(decks).sort().forEach(name => {
+                    const d = decks[name];
+                    const div = document.createElement('div');
+                    div.className = 'deck-card';
+                    
+                    let statusHtml = '', barClass = '', action = '';
+                    const hasWork = (d.due + d.new) > 0;
+
+                    if (hasWork) {
+                        barClass = 'status-active';
+                        statusHtml = `<span class="highlight-due">${d.due} Due</span> • <span class="highlight-new">${d.new} New</span>`;
+                        action = `app.startSession('deck_auto', '${name}')`;
+                    } else {
+                        barClass = 'status-done';
+                        if (d.nextReview !== Infinity) {
+                            const days = Math.ceil((d.nextReview - now) / 86400000);
+                            statusHtml = `<span class="highlight-done">✅ Next: ${days<=1?'tomorrow':days+' days'}</span>`;
+                        } else {
+                            statusHtml = `<span class="highlight-done">✅ All Done</span>`;
+                        }
+                        action = `app.viewList('${name}')`;
+                    }
+
+                    div.innerHTML = `
+                        <div class="status-bar ${barClass}"></div>
+                        <div class="deck-header"><div class="deck-title">${name}</div><div class="deck-count">${d.total}</div></div>
+                        <div class="deck-info">${statusHtml}</div>
+                    `;
+                    div.setAttribute('onclick', action);
+                    deckListEl.appendChild(div);
+                });
+                
+                // Populate Datalist for Edit Suggestions
+                const dl = document.getElementById('deck-suggestions');
+                dl.innerHTML = '';
+                Object.keys(decks).forEach(d => { dl.innerHTML += `<option value="${d}">`; });
             },
 
             // --- SESSION ---
-            startSession: function(mode) {
+            startSession: function(mode, deckName) {
                 const now = Date.now();
                 let pool = [];
-                if (mode === 'review') pool = this.db.map((c, i) => ({...c, idx: i})).filter(c => c.s === 'active' && c.due <= now).map(c => c.idx);
-                else pool = this.db.map((c, i) => ({...c, idx: i})).filter(c => c.s === 'new').map(c => c.idx);
-                
-                this.sessionQueue = pool.slice(0, this.batchSize);
-                if (this.sessionQueue.length === 0) { alert("No cards!"); return; }
-                this.sessionTotal = this.sessionQueue.length;
+
+                if (mode === 'global_review') {
+                    pool = this.db.filter(c => c.s === 'active' && c.due <= now);
+                    document.getElementById('deck-label').textContent = "Reviewing All";
+                } 
+                else if (mode === 'global_new') {
+                    pool = this.db.filter(c => c.s === 'new');
+                    document.getElementById('deck-label').textContent = "Learning New";
+                }
+                else if (mode === 'deck_auto') {
+                    const due = this.db.filter(c => c.deck === deckName && c.s === 'active' && c.due <= now);
+                    const newC = this.db.filter(c => c.deck === deckName && c.s === 'new');
+                    pool = [...due, ...newC];
+                    document.getElementById('deck-label').textContent = deckName;
+                }
+
+                if (pool.length === 0) { alert("Nothing to study here!"); return; }
+
+                this.sessionQueue = pool.map(c => this.db.indexOf(c));
                 this.sessionQueue.sort(() => Math.random() - 0.5);
+                this.sessionTotal = this.sessionQueue.length;
                 this.showScreen('study'); this.loadNextCard();
             },
 
             loadNextCard: function() {
-                if (this.sessionQueue.length === 0) { alert("Done!"); this.goHome(); return; }
+                if (this.sessionQueue.length === 0) { alert("Session Complete!"); this.goHome(); return; }
                 document.getElementById('session-counter').textContent = (this.sessionTotal - this.sessionQueue.length + 1);
                 const el = document.getElementById('card-element');
                 el.classList.remove('is-flipped');
                 document.getElementById('controls-area').classList.remove('visible');
+                
                 this.currentCardIdx = this.sessionQueue[0];
                 const card = this.db[this.currentCardIdx];
-                document.getElementById('card-front-text').textContent = card.f;
-                const badgeEl = document.getElementById('card-cefr-badge');
-                if (card.cefr) {
-                    badgeEl.style.display = 'block'; badgeEl.textContent = card.cefr; badgeEl.className = 'cefr-badge-card'; 
-                    const lvl = card.cefr.toLowerCase();
-                    if(lvl.includes('a1')) badgeEl.classList.add('cefr-a1');
-                    else if(lvl.includes('a2')) badgeEl.classList.add('cefr-a2');
-                    else if(lvl.includes('b1')) badgeEl.classList.add('cefr-b1');
-                    else badgeEl.classList.add('cefr-u');
-                } else { badgeEl.style.display = 'none'; }
-                document.getElementById('card-back-text').textContent = "";
-                document.getElementById('card-context-text').textContent = "";
-                setTimeout(() => { document.getElementById('card-back-text').textContent = card.b; document.getElementById('card-context-text').textContent = card.c; }, 500);
+
+                document.getElementById('front-text').textContent = card.f;
+                // Badges
+                const badge = document.getElementById('card-cefr-badge');
+                if(card.cefr) { badge.style.display='block'; badge.innerText=card.cefr; badge.className='cefr-badge-card'; if(card.cefr.includes('A1')) badge.classList.add('cefr-a1'); }
+                else badge.style.display='none';
+
+                document.getElementById('back-text').textContent = "";
+                document.getElementById('context-text').textContent = "";
+                setTimeout(() => {
+                    document.getElementById('back-text').textContent = card.b;
+                    document.getElementById('context-text').textContent = card.c || "";
+                }, 500);
             },
 
             flipCard: function() {
                 const el = document.getElementById('card-element');
-                const controls = document.getElementById('controls-area');
                 el.classList.toggle('is-flipped');
-                if (el.classList.contains('is-flipped')) setTimeout(() => controls.classList.add('visible'), 200); else controls.classList.remove('visible');
+                if (el.classList.contains('is-flipped')) setTimeout(() => document.getElementById('controls-area').classList.add('visible'), 200);
+                else document.getElementById('controls-area').classList.remove('visible');
             },
 
             answerCard: function(correct) {
-                if (!document.getElementById('card-element').classList.contains('is-flipped')) return;
                 const card = this.db[this.currentCardIdx];
                 if (correct) {
                     card.s = 'active'; card.str++;
@@ -457,47 +580,120 @@
                 this.saveToCloud(); this.loadNextCard();
             },
 
-            speakWord: function(e) { e.stopPropagation(); if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(this.db[this.currentCardIdx].f); u.lang = 'de-DE'; window.speechSynthesis.speak(u); } },
-            showScreen: function(id) { document.querySelectorAll('.screen').forEach(el => el.classList.remove('active')); document.getElementById(id).classList.add('active'); },
-            showVocabList: function() { this.showScreen('vocab'); this.renderVocabList(); }, showImport: function() { this.showScreen('import'); }, goHome: function() { this.showScreen('dashboard'); this.updateDashboard(); },
-            
-            // --- SAFE LIST RENDER ---
-            renderVocabList: function() {
-                try {
-                    if (!this.db || !Array.isArray(this.db)) return;
-                    const q = (document.getElementById('search-input').value || "").toLowerCase();
-                    const tbody = document.getElementById('vocab-table-body'); tbody.innerHTML = '';
-                    
-                    const filtered = this.db.filter(c => {
-                        if (!c) return false;
-                        const f = String(c.f || "").toLowerCase();
-                        const b = String(c.b || "").toLowerCase();
-                        return f.includes(q) || b.includes(q);
-                    });
-                    
-                    // Fixed: Added check for element existence
-                    const countEl = document.getElementById('table-count');
-                    if (countEl) countEl.innerText = `Count: ${filtered.length}`;
-                    
-                    document.getElementById('select-all').checked = false; this.updateBulkButton();
-                    
-                    filtered.forEach(c => {
-                        const tr = document.createElement('tr');
-                        const f = c.f || "(Empty)";
-                        const b = c.b || "(Empty)";
-                        tr.innerHTML = `<td><input type="checkbox" class="select-row" value="${c.id}" onchange="app.updateBulkButton()"></td><td><b>${f}</b></td><td>${b}</td><td>${c.cefr||""}</td><td>${c.str}</td><td style="text-align: right;"><button class="btn-sm btn-danger" onclick="app.deleteWord(${c.id})">🗑️</button></td>`;
-                        tbody.appendChild(tr);
-                    });
-                } catch(e) {
-                    console.error(e);
-                    this.log("List Render Error: " + e.message);
+            // --- EDITING & LIST ---
+            viewList: function(deckName) {
+                this.showVocabList(deckName);
+            },
+
+            showVocabList: function(filterDeck = null) {
+                this.showScreen('list-view');
+                this.renderVocabList(filterDeck);
+            },
+
+            renderVocabList: function(filterDeck = null) {
+                const q = document.getElementById('search-input').value.toLowerCase();
+                const tbody = document.getElementById('vocab-table-body'); tbody.innerHTML = '';
+                
+                let filtered = this.db.filter(c => (c.f && c.f.toLowerCase().includes(q)) || (c.b && c.b.toLowerCase().includes(q)));
+                if(filterDeck) {
+                    filtered = filtered.filter(c => c.deck === filterDeck);
+                    document.getElementById('list-title').textContent = filterDeck;
+                } else {
+                    document.getElementById('list-title').textContent = "All Words";
+                }
+                
+                document.getElementById('table-count').innerText = `Count: ${filtered.length}`;
+
+                filtered.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td><b>${c.f}</b></td><td>${c.b}</td><td>${c.deck||"General"}</td>
+                    <td style="text-align: right;"><button class="btn-sm btn-secondary" onclick="app.editWord(${c.id})">✏️</button></td>`;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            editWord: function(id) {
+                const card = this.db.find(c => c.id === id);
+                if(!card) return;
+                
+                document.getElementById('edit-id').value = card.id;
+                document.getElementById('edit-f').value = card.f;
+                document.getElementById('edit-b').value = card.b;
+                document.getElementById('edit-c').value = card.c || "";
+                document.getElementById('edit-cefr').value = card.cefr || "A1";
+                document.getElementById('edit-deck').value = card.deck || "General";
+                
+                this.showScreen('edit-screen');
+            },
+
+            saveWordEdit: function() {
+                const id = parseFloat(document.getElementById('edit-id').value);
+                const card = this.db.find(c => c.id === id);
+                if(card) {
+                    card.f = document.getElementById('edit-f').value;
+                    card.b = document.getElementById('edit-b').value;
+                    card.c = document.getElementById('edit-c').value;
+                    card.cefr = document.getElementById('edit-cefr').value;
+                    card.deck = document.getElementById('edit-deck').value;
+                    this.saveToCloud();
+                    this.showVocabList(); // Go back to list
                 }
             },
-            deleteWord: function(id) { if(confirm("Delete word?")) { this.db = this.db.filter(c => c.id !== id); this.saveToCloud(); this.renderVocabList(); } },
-            toggleSelectAll: function() { const isChecked = document.getElementById('select-all').checked; document.querySelectorAll('.select-row').forEach(cb => cb.checked = isChecked); this.updateBulkButton(); },
-            updateBulkButton: function() { const count = document.querySelectorAll('.select-row:checked').length; const btn = document.getElementById('bulk-actions'); if (count > 0) { btn.style.display = 'block'; document.getElementById('selected-count').innerText = count; } else { btn.style.display = 'none'; } },
-            deleteSelected: function() { const checkedBoxes = document.querySelectorAll('.select-row:checked'); const count = checkedBoxes.length; if (count === 0) return; if (confirm(`Delete ${count} words?`)) { const idsToDelete = Array.from(checkedBoxes).map(cb => parseFloat(cb.value)); this.db = this.db.filter(c => !idsToDelete.includes(c.id)); this.saveToCloud(); this.renderVocabList(); } },
-            setupKeyboard: function() { document.addEventListener('keydown', (e) => { if (!document.getElementById('study').classList.contains('active')) return; if (e.code === 'Space') { this.flipCard(); e.preventDefault(); } else if (e.code === 'ArrowRight') this.answerCard(true); else if (e.code === 'ArrowLeft') this.answerCard(false); }); },
+
+            deleteWordFromEdit: function() {
+                const id = parseFloat(document.getElementById('edit-id').value);
+                if(confirm("Delete this word?")) {
+                    this.db = this.db.filter(c => c.id !== id);
+                    this.saveToCloud();
+                    this.showVocabList();
+                }
+            },
+
+            // --- IMPORT ---
+            processImport: function() {
+                const deckName = document.getElementById('import-deck-name').value.trim() || "General";
+                const txt = document.getElementById('import-text').value;
+                if (!txt.trim()) return;
+                
+                const lines = txt.split(/[\n\r]+/);
+                let added = 0;
+                lines.forEach(line => {
+                    line = line.trim(); if(!line) return;
+                    const parts = []; let current = ''; let inQuote = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i]; if (char === '"') { inQuote = !inQuote; current += char; } else if (char === ',' && !inQuote) { parts.push(current); current = ''; } else { current += char; }
+                    }
+                    parts.push(current);
+                    
+                    if (parts.length >= 2) {
+                        const clean = (s) => s ? s.trim().replace(/^"|"$/g, '') : "";
+                        const f = clean(parts[0]); const b = clean(parts[1]); const c = parts[2] ? clean(parts[2]) : ""; const cefr = parts[3] ? clean(parts[3]) : "";
+                        
+                        // Check duplicates
+                        const exists = this.db.some(card => card.f.toLowerCase() === f.toLowerCase() && card.b.toLowerCase() === b.toLowerCase());
+                        if (!exists && f && b) { 
+                            this.db.push({ id: Date.now()+Math.random(), f: f, b: b, c: c, cefr: cefr, deck: deckName, s: 'new', str: 0, due: 0 }); 
+                            added++; 
+                        }
+                    }
+                });
+                alert(`Added ${added} words to "${deckName}".`);
+                document.getElementById('import-text').value = ""; this.saveToCloud(); this.goHome();
+            },
+
+            // --- UTILS ---
+            speakWord: function(e) { e.stopPropagation(); if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(this.db[this.currentCardIdx].f); u.lang = 'de-DE'; window.speechSynthesis.speak(u); } },
+            editGoal: function() { const g = prompt("Set Goal:", this.goal); if(g) { this.goal = parseInt(g); this.saveToCloud(); } },
+            runDiagnostics: function() {
+                let fix = 0;
+                this.db.forEach(c => { if(!c.s){c.s='new';fix++} if(!c.deck){c.deck='General';fix++} });
+                if(fix>0) { this.saveToCloud(); alert(`Fixed ${fix} items.`); } else alert("Data OK.");
+            },
+            resetData: function() { if(confirm("Delete ALL data?")) { this.db = []; this.saveToCloud(); } },
+            
+            showScreen: function(id) { document.querySelectorAll('.screen').forEach(el => el.classList.remove('active')); document.getElementById(id).classList.add('active'); },
+            showVocabList: function() { this.showScreen('list-view'); this.renderVocabList(); }, showImport: function() { this.showScreen('import'); }, goHome: function() { this.showScreen('library'); this.renderLibrary(); },
+            setupKeyboard: function() { document.addEventListener('keydown', (e) => { if (!document.getElementById('study').classList.contains('active')) return; if (e.code === 'Space') { this.flipCard(); e.preventDefault(); } else if (e.code === 'ArrowRight') this.answerCard(true); else if (e.code === 'ArrowLeft') this.answerCard(false); }); }
         };
 
         window.addEventListener('DOMContentLoaded', () => app.init());
