@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pareto German (UI Fix)</title>
+    <title>Pareto German (Goal Fixed)</title>
     <style>
         :root {
             --primary: #6366f1; --primary-dark: #4f46e5;
@@ -36,13 +36,14 @@
         .btn-big { border: none; padding: 20px 15px; border-radius: 16px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: transform 0.1s; color: white; display: flex; flex-direction: column; align-items: center; gap: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
         .btn-big:active { transform: scale(0.98); }
         .btn-review { background: var(--primary); } .btn-learn { background: var(--secondary); }
-        .btn-big:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; box-shadow: none; pointer-events: none; } /* Disabled visual fix */
+        .btn-big:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; box-shadow: none; }
         .count-badge { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; font-size: 0.9rem; min-width: 20px; }
 
         .btn { background: var(--primary); color: white; border: none; padding: 16px 32px; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 10px; }
         .btn-secondary { background: white; color: var(--text-main); border: 1px solid #e5e7eb; box-shadow: none; margin-top: 5px; padding: 12px; font-size: 1rem; }
         .btn-sm { padding: 8px 12px; font-size: 0.9rem; width: auto; display: inline-block; }
         .btn-danger { color: var(--danger); border-color: #fee2e2; background: #fef2f2; }
+        .btn-warning { color: #b45309; border-color: #fcd34d; background: #fffbeb; }
 
         /* Auth */
         #auth-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(243, 244, 246, 0.98); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
@@ -129,6 +130,9 @@
                 <div class="stats-grid">
                     <div class="stat-box"><div class="stat-value" id="stat-total">0</div><div class="stat-label">Total Words</div></div>
                     <div class="stat-box"><div class="stat-value" id="stat-learned">0</div><div class="stat-label">Learned</div></div>
+                    <!-- GOAL RESTORED HERE -->
+                    <div class="stat-box"><div class="stat-value" id="stat-new">0</div><div class="stat-label">New Available</div></div>
+                    <div class="stat-box"><div class="stat-value" id="stat-goal">1000</div><div class="stat-label">Goal (Edit)</div></div>
                 </div>
             </div>
             <div class="dashboard-card" style="padding: 16px;">
@@ -137,7 +141,9 @@
                     <button class="btn btn-secondary" onclick="app.showVocabList()">📖 View List</button>
                     <button class="btn btn-secondary" onclick="app.showImport()">📥 Add Words</button>
                 </div>
-                <button class="btn btn-secondary btn-danger" style="margin-top:10px;" onclick="app.resetData()">🗑️ Reset Data</button>
+                <!-- THE FIXER BUTTON -->
+                <button class="btn btn-secondary btn-warning" style="margin-top:10px;" onclick="app.runDiagnostics()">🛠️ Fix Database (Ghost Words)</button>
+                <button class="btn btn-secondary btn-danger" style="margin-top:5px;" onclick="app.resetData()">🗑️ Reset Data</button>
             </div>
         </div>
 
@@ -171,7 +177,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;"><h2>List</h2><button class="btn btn-sm btn-secondary" onclick="app.goHome()">Back</button></div>
                 <input type="text" id="search-input" class="search-bar" placeholder="Search..." onkeyup="app.renderVocabList()">
                 <div id="bulk-actions" style="margin-bottom: 10px; display: none;"><button class="btn btn-sm btn-danger" onclick="app.deleteSelected()">🗑️ Delete (<span id="selected-count">0</span>)</button></div>
-                <div class="table-container"><table><thead><tr><th style="width: 40px;"><input type="checkbox" id="select-all" onclick="app.toggleSelectAll()"></th><th>Word</th><th>Meaning</th><th>Lvl</th><th>Act</th></tr></thead><tbody id="vocab-table-body"></tbody></table></div>
+                <div class="table-container"><table><thead><tr><th style="width: 40px;"><input type="checkbox" id="select-all" onclick="app.toggleSelectAll()"></th><th>Word</th><th>Meaning</th><th>Lvl</th><th>Streak</th><th style="text-align: right;">Action</th></tr></thead><tbody id="vocab-table-body"></tbody></table></div>
             </div>
         </div>
 
@@ -280,7 +286,7 @@
                         const data = docSnap.data();
                         this.db = data.cards || [];
                         this.log(`Data Sync: Received ${this.db.length} cards.`);
-                        this.updateDashboard(); // CRITICAL CALL
+                        this.updateDashboard(); 
                     } else {
                         this.log("No cloud data found.");
                         this.db = [];
@@ -291,6 +297,27 @@
                     this.log("Sync Error: " + error.message);
                     this.showStatus('error');
                 });
+            },
+
+            // --- THE FIXER FUNCTION 🛠️ ---
+            runDiagnostics: function() {
+                if(!this.db || this.db.length === 0) { alert("Database is empty. Nothing to fix."); return; }
+                
+                let fixedCount = 0;
+                this.db.forEach(c => {
+                    let dirty = false;
+                    if (!c.s || (c.s !== 'new' && c.s !== 'active')) { c.s = 'new'; dirty = true; }
+                    if (!c.due || isNaN(c.due)) { c.due = 0; dirty = true; }
+                    if (!c.str || isNaN(c.str)) { c.str = 0; dirty = true; }
+                    if(dirty) fixedCount++;
+                });
+
+                if(fixedCount > 0) {
+                    this.saveToCloud();
+                    alert(`✅ Fixed ${fixedCount} broken words! Check the dashboard now.`);
+                } else {
+                    alert("Database looks healthy! No issues found.");
+                }
             },
 
             saveToCloud: async function() {
@@ -322,7 +349,6 @@
                 try {
                     const now = Date.now();
                     
-                    // Calculation Safety Checks
                     let reviews = 0, newWords = 0, learned = 0;
                     
                     if (this.db && Array.isArray(this.db)) {
@@ -331,10 +357,8 @@
                         learned = this.db.filter(c => c.s === 'active' && c.str > 0).length;
                     }
 
-                    // Log Logic for Debugging
                     this.log(`UI Update: Rev=${reviews}, New=${newWords}, Total=${this.db.length}`);
 
-                    // Safe DOM Updates
                     const setText = (id, val) => {
                         const el = document.getElementById(id);
                         if(el) el.textContent = val;
@@ -342,6 +366,8 @@
 
                     setText('stat-total', this.db.length);
                     setText('stat-learned', learned);
+                    setText('stat-due', reviews);
+                    setText('stat-new', newWords);
                     
                     setText('count-review', reviews);
                     setText('count-new', newWords);
@@ -443,17 +469,34 @@
             showScreen: function(id) { document.querySelectorAll('.screen').forEach(el => el.classList.remove('active')); document.getElementById(id).classList.add('active'); },
             showVocabList: function() { this.showScreen('vocab'); this.renderVocabList(); }, showImport: function() { this.showScreen('import'); }, goHome: function() { this.showScreen('dashboard'); this.updateDashboard(); },
             
+            // --- CRASH PROOF RENDER LIST ---
             renderVocabList: function() {
-                const q = document.getElementById('search-input').value.toLowerCase();
-                const tbody = document.getElementById('vocab-table-body'); tbody.innerHTML = '';
-                const filtered = this.db.filter(c => c.f.toLowerCase().includes(q) || c.b.toLowerCase().includes(q));
-                document.getElementById('table-count').innerText = `Count: ${filtered.length}`;
-                document.getElementById('select-all').checked = false; this.updateBulkButton();
-                filtered.forEach(c => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `<td><input type="checkbox" class="select-row" value="${c.id}" onchange="app.updateBulkButton()"></td><td><b>${c.f}</b></td><td>${c.b}</td><td>${c.cefr||""}</td><td>${c.str}</td><td style="text-align: right;"><button class="btn-sm btn-danger" onclick="app.deleteWord(${c.id})">🗑️</button></td>`;
-                    tbody.appendChild(tr);
-                });
+                try {
+                    const q = document.getElementById('search-input').value.toLowerCase();
+                    const tbody = document.getElementById('vocab-table-body'); tbody.innerHTML = '';
+                    
+                    // SAFE FILTER: Checks if property exists before calling toLowerCase
+                    const filtered = this.db.filter(c => 
+                        (c.f && c.f.toLowerCase().includes(q)) || 
+                        (c.b && c.b.toLowerCase().includes(q))
+                    );
+                    
+                    document.getElementById('table-count').innerText = `Count: ${filtered.length}`;
+                    document.getElementById('select-all').checked = false; this.updateBulkButton();
+                    
+                    filtered.forEach(c => {
+                        const tr = document.createElement('tr');
+                        // Use (Empty) if text is missing
+                        const f = c.f || "(Empty)";
+                        const b = c.b || "(Empty)";
+                        
+                        tr.innerHTML = `<td><input type="checkbox" class="select-row" value="${c.id}" onchange="app.updateBulkButton()"></td><td><b>${f}</b></td><td>${b}</td><td>${c.cefr||""}</td><td>${c.str}</td><td style="text-align: right;"><button class="btn-sm btn-danger" onclick="app.deleteWord(${c.id})">🗑️</button></td>`;
+                        tbody.appendChild(tr);
+                    });
+                } catch(e) {
+                    console.error(e);
+                    this.log("List Render Error: " + e.message);
+                }
             },
             deleteWord: function(id) { if(confirm("Delete word?")) { this.db = this.db.filter(c => c.id !== id); this.saveToCloud(); this.renderVocabList(); } },
             toggleSelectAll: function() { const isChecked = document.getElementById('select-all').checked; document.querySelectorAll('.select-row').forEach(cb => cb.checked = isChecked); this.updateBulkButton(); },
