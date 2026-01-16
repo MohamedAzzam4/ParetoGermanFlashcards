@@ -106,8 +106,8 @@
         @media (max-width: 600px) { .scene { height: 280px; } }
         .card { width: 100%; height: 100%; position: relative; transition: transform 0.6s; transform-style: preserve-3d; }
         .card.is-flipped { transform: rotateY(180deg); }
-        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 20px; box-shadow: var(--shadow); padding: 20px; text-align: center; }
-        .face.back { transform: rotateY(180deg); border: 2px solid var(--primary); }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 20px; box-shadow: var(--shadow); padding: 20px; text-align: center; }
+        .card-face.back { transform: rotateY(180deg); border: 2px solid var(--primary); }
         .word-main { font-size: 2rem; font-weight: 800; color: var(--text-main); margin-bottom: 10px; }
         .word-context { font-style: italic; color: var(--text-light); font-size: 1rem; }
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; opacity: 0; pointer-events: none; }
@@ -222,15 +222,15 @@
 
             <div class="scene" onclick="app.flipCard()">
                 <div class="card" id="card-element">
-                    <div class="face front">
+                    <div class="card-face front">
                         <div id="card-cefr-badge" class="cefr-badge-card cefr-u">A1</div>
                         <div class="audio-container"><button class="btn-audio" onclick="app.speakWord(event)">🔊</button></div>
-                        <div class="word-main" id="front-text">...</div>
+                        <div class="word-main" id="card-front-text">...</div>
                         <small style="color:#9ca3af; margin-top:10px;">Tap to flip</small>
                     </div>
-                    <div class="face back">
-                        <div class="word-main" id="back-text">...</div>
-                        <div id="context-text" class="word-context"></div>
+                    <div class="card-face back">
+                        <div class="word-main" id="card-back-text">...</div>
+                        <div id="card-context-text" class="word-context"></div>
                     </div>
                 </div>
             </div>
@@ -546,17 +546,17 @@
                 this.currentCardIdx = this.sessionQueue[0];
                 const card = this.db[this.currentCardIdx];
 
-                document.getElementById('front-text').textContent = card.f;
+                document.getElementById('card-front-text').textContent = card.f;
                 // Badges
                 const badge = document.getElementById('card-cefr-badge');
                 if(card.cefr) { badge.style.display='block'; badge.innerText=card.cefr; badge.className='cefr-badge-card'; if(card.cefr.includes('A1')) badge.classList.add('cefr-a1'); }
                 else badge.style.display='none';
 
-                document.getElementById('back-text').textContent = "";
-                document.getElementById('context-text').textContent = "";
+                document.getElementById('card-back-text').textContent = "";
+                document.getElementById('card-context-text').textContent = "";
                 setTimeout(() => {
-                    document.getElementById('back-text').textContent = card.b;
-                    document.getElementById('context-text').textContent = card.c || "";
+                    document.getElementById('card-back-text').textContent = card.b;
+                    document.getElementById('card-context-text').textContent = card.c || "";
                 }, 500);
             },
 
