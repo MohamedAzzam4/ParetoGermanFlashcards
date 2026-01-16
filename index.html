@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pareto German (Live App)</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-light: #6b7280;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* --- Layout Containers --- */
+        .container { width: 100%; max-width: 800px; background: transparent; filter: blur(5px); transition: filter 0.3s; pointer-events: none; }
+        .container.authenticated { filter: none; pointer-events: auto; }
+        
+        .screen { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .screen.active { display: block; }
+
+        /* --- AUTH MODAL --- */
+        #auth-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(243, 244, 246, 0.95); z-index: 2000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .auth-card {
+            background: white; padding: 30px; border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            width: 90%; max-width: 400px; text-align: center;
+        }
+        .auth-input {
+            width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #e5e7eb;
+            border-radius: 10px; font-size: 1rem; outline: none; transition: border 0.2s;
+        }
+        .auth-input:focus { border-color: var(--primary); }
+        .tab-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: #e5e7eb; border-radius: 8px; cursor: pointer; font-weight: 600; color: #6b7280; }
+        .tab-btn.active { background: var(--primary); color: white; }
+        
+        /* --- Dashboard Styles --- */
+        .dashboard-card {
+            background: var(--card-bg); border-radius: 16px; padding: 24px;
+            box-shadow: var(--shadow); margin-bottom: 20px; text-align: center; position: relative;
+        }
+
+        .cloud-badge {
+            position: absolute; top: 15px; right: 15px;
+            font-size: 0.8rem; font-weight: 600; 
+            padding: 4px 10px; border-radius: 20px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .status-syncing { background: #e0f2fe; color: #0284c7; }
+        .status-saved { background: #dcfce7; color: #166534; }
+        .status-error { background: #fee2e2; color: #991b1b; }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+        .stat-box { background: #f9fafb; padding: 12px; border-radius: 12px; border: 1px solid #e5e7eb; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .stat-label { font-size: 0.85rem; color: var(--text-light); }
+
+        .btn {
+            background: var(--primary); color: white; border: none; padding: 16px 32px;
+            border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; width: 100%;
+            transition: transform 0.1s, background 0.2s; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3); margin-bottom: 10px;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn:hover { background: var(--primary-dark); }
+        .btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        
+        .btn-secondary { background: white; color: var(--text-main); border: 1px solid #e5e7eb; box-shadow: none; margin-top: 5px; padding: 12px; font-size: 1rem; }
+        .btn-sm { padding: 8px 12px; font-size: 0.9rem; width: auto; display: inline-block; margin: 0; }
+        .btn-danger { color: var(--danger); border-color: #fee2e2; background: #fef2f2; }
+
+        /* --- Flashcard Scene --- */
+        .scene { width: 100%; height: 340px; perspective: 1000px; margin: 20px 0; cursor: pointer; }
+        .card { width: 100%; height: 100%; position: relative; transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1); transform-style: preserve-3d; border-radius: 20px; box-shadow: var(--shadow); }
+        .card.is-flipped { transform: rotateY(180deg); }
+
+        .card-face {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            border-radius: 20px; background: var(--card-bg); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; padding: 30px; text-align: center;
+        }
+        .card-face.back { transform: rotateY(180deg); background: #fff; border: 2px solid var(--primary); }
+
+        .audio-container { position: absolute; top: 20px; right: 20px; z-index: 10; }
+        .btn-audio { background: rgba(238, 242, 255, 0.8); color: var(--primary); border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .btn-audio:hover { transform: scale(1.1); background: var(--primary); color: white; }
+
+        .cefr-badge-card {
+            position: absolute; top: 20px; left: 20px; 
+            padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.9rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .word-main { font-size: 2.5rem; font-weight: 800; color: var(--text-main); margin-bottom: 10px; }
+        .word-context { font-style: italic; color: var(--text-light); margin-top: 20px; font-size: 1rem; opacity: 0.8; }
+        .tap-hint { position: absolute; bottom: 20px; font-size: 0.8rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px;}
+
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .controls.visible { opacity: 1; pointer-events: auto; }
+        .btn-control { padding: 20px; border-radius: 16px; border: none; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: transform 0.1s; }
+        .btn-fail { background: #fee2e2; color: var(--danger); }
+        .btn-pass { background: #dcfce7; color: var(--success); }
+
+        .table-container { overflow-x: auto; max-height: 60vh; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; background: white; text-align: left; }
+        th, td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+        th { background: #f9fafb; font-weight: 600; position: sticky; top: 0; z-index: 5; }
+        tr:hover { background: #f9fafb; }
+        
+        .search-bar { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 10px; }
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
+        textarea { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-family: monospace; margin: 10px 0; resize: vertical; }
+        #file-input { display: none; }
+
+        .progress-bar { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 20px; }
+        .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
+
+        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+        .status-new { background: #e0f2fe; color: #0369a1; }
+        .status-active { background: #dcfce7; color: #15803d; }
+        .status-due { background: #fef9c3; color: #a16207; }
+
+        .cefr-badge { display: inline-block; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; color: white; }
+        .cefr-a1 { background-color: #22c55e; }
+        .cefr-a2 { background-color: #10b981; }
+        .cefr-b1 { background-color: #3b82f6; }
+        .cefr-b2 { background-color: #6366f1; }
+        .cefr-c1 { background-color: #a855f7; }
+        .cefr-u { background-color: #9ca3af; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.9); z-index: 3000; display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary); border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOADING SPINNER -->
+    <div id="loader">
+        <div class="spinner"></div>
+        <p style="margin-top: 15px; color: #6b7280;">Connecting...</p>
+    </div>
+
+    <!-- AUTH SCREEN -->
+    <div id="auth-modal">
+        <div class="auth-card">
+            <h1 style="margin-bottom: 20px;">🇩🇪 Willkommen!</h1>
+            <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 20px;">
+                Enter a unique username to sync your progress.
+            </p>
+            
+            <div class="tab-group">
+                <button class="tab-btn active" onclick="app.switchAuthTab('login')">Login</button>
+                <button class="tab-btn" onclick="app.switchAuthTab('register')">New User</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <div id="login-form">
+                <input type="text" id="login-user" class="auth-input" placeholder="Username (e.g. Max)" onkeypress="app.handleEnter(event, 'login')">
+                <input type="password" id="login-pin" class="auth-input" placeholder="PIN (e.g. 1234)" onkeypress="app.handleEnter(event, 'login')">
+                <button class="btn" onclick="app.login()">Login & Sync</button>
+            </div>
+
+            <!-- REGISTER FORM -->
+            <div id="register-form" style="display: none;">
+                <input type="text" id="reg-user" class="auth-input" placeholder="Choose Username" onkeypress="app.handleEnter(event, 'register')">
+                <input type="password" id="reg-pin" class="auth-input" placeholder="Set a 4-digit PIN" onkeypress="app.handleEnter(event, 'register')">
+                <p id="reg-error" style="color: var(--danger); font-size: 0.9rem; min-height: 1.2em; margin-bottom: 5px;"></p>
+                <button class="btn" onclick="app.register()">Create Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="app-container" class="container">
+        
+        <!-- DASHBOARD -->
+        <div id="dashboard" class="screen active">
+            <div class="dashboard-card">
+                <div id="cloud-status" class="cloud-badge status-syncing">☁️ Online</div>
+                <div style="position: absolute; top: 15px; left: 15px; font-size: 0.8rem; color: #6b7280;">
+                    User: <b id="display-username">...</b> <a href="#" onclick="app.logout()" style="color: var(--danger); margin-left: 5px; text-decoration: none;">(Logout)</a>
+                </div>
+
+                <h1 style="margin-bottom: 5px;">🇩🇪 German Mastery</h1>
+                <p style="color: var(--text-light);">Pareto Principle: Top 20%</p>
+
+                <div class="stats-grid">
+                    <div class="stat-box"><div class="stat-value" id="stat-due">0</div><div class="stat-label">Due Today</div></div>
+                    <div class="stat-box"><div class="stat-value" id="stat-learned">0</div><div class="stat-label">Learned</div></div>
+                    <div class="stat-box"><div class="stat-value" id="stat-new">0</div><div class="stat-label">New Available</div></div>
+                    <div class="stat-box"><div class="stat-value" id="stat-goal">1000</div><div class="stat-label">Goal (Edit)</div></div>
+                </div>
+
+                <button class="btn" id="btn-start" onclick="app.startSession()">Start Session</button>
+                <div class="progress-bar"><div id="total-progress" class="progress-fill"></div></div>
+            </div>
+
+            <div class="dashboard-card" style="padding: 16px;">
+                <h3 style="margin-bottom: 12px;">Manage Data</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="app.showVocabList()">📖 View Words</button>
+                    <button class="btn btn-secondary" onclick="app.showImport()">📥 Paste Words</button>
+                </div>
+                <button class="btn btn-secondary btn-danger" style="margin-top:10px;" onclick="app.resetData()">🗑️ Clear My Data</button>
+            </div>
+        </div>
+
+        <!-- STUDY SCREEN -->
+        <div id="study" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-weight: 600; color: var(--text-light);">Set Progress: <span id="session-counter">1</span>/50</span>
+                <button onclick="app.goHome()" style="background:none; border:none; color: var(--text-light); cursor:pointer;">Exit</button>
+            </div>
+            <div class="scene" onclick="app.flipCard()">
+                <div class="card" id="card-element">
+                    <div class="card-face front">
+                        <div id="card-cefr-badge" class="cefr-badge-card cefr-u">A1</div>
+                        <div class="audio-container"><button class="btn-audio" onclick="app.speakWord(event)" title="Listen">🔊</button></div>
+                        <div class="word-main" id="card-front-text">...</div>
+                        <div class="tap-hint">Tap to Flip</div>
+                    </div>
+                    <div class="card-face back">
+                        <div class="word-main" id="card-back-text">...</div>
+                        <div class="word-context" id="card-context-text"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="controls" id="controls-area">
+                <button class="btn-control btn-fail" onclick="app.answerCard(false)">❌ Forgot</button>
+                <button class="btn-control btn-pass" onclick="app.answerCard(true)">✅ I Know It</button>
+            </div>
+        </div>
+
+        <!-- VOCAB SCREEN -->
+        <div id="vocab" class="screen">
+            <div class="dashboard-card" style="text-align: left; padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2>Vocabulary List</h2>
+                    <button class="btn btn-sm btn-secondary" onclick="app.goHome()">Back</button>
+                </div>
+                <input type="text" id="search-input" class="search-bar" placeholder="Search words..." onkeyup="app.renderVocabList()">
+                <div id="bulk-actions" style="margin-bottom: 10px; display: none;">
+                    <button class="btn btn-sm btn-danger" onclick="app.deleteSelected()">🗑️ Delete Selected (<span id="selected-count">0</span>)</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th style="width: 40px;"><input type="checkbox" id="select-all" onclick="app.toggleSelectAll()"></th><th>Word (DE)</th><th>Meaning (EN)</th><th>CEFR</th><th>Streak</th><th style="text-align: right;">Action</th></tr></thead>
+                        <tbody id="vocab-table-body"></tbody>
+                    </table>
+                </div>
+                <p id="table-count" style="margin-top: 10px; color: var(--text-light); font-size: 0.9rem;"></p>
+            </div>
+        </div>
+
+        <!-- IMPORT SCREEN -->
+        <div id="import" class="screen">
+            <div class="dashboard-card">
+                <h2>Add New Words</h2>
+                <p style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 10px;">Format: <b>German, "English", Context, CEFR</b></p>
+                <textarea id="import-area" rows="10" placeholder='um ... zu, "in order to", Ich lerne um zu reisen, B1'></textarea>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="btn" onclick="app.processImport()">Save Words</button>
+                    <button class="btn btn-secondary" onclick="app.goHome()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE MODULES -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // === USER'S LIVE CONFIG ===
+        const firebaseConfig = {
+            apiKey: "AIzaSyABm29aJZQcCipXiBrnASs2sq6cGfDn3u8",
+            authDomain: "flashcards-a3b48.firebaseapp.com",
+            projectId: "flashcards-a3b48",
+            storageBucket: "flashcards-a3b48.firebasestorage.app",
+            messagingSenderId: "312576903829",
+            appId: "1:312576903829:web:1417de83b48f38870aa99c",
+            measurementId: "G-TH42LFK648"
+        };
+        
+        window.app = {
+            db: [],
+            goal: 1000,
+            firestore: null,
+            userId: null, // This acts as the Username in this design
+            
+            // Runtime State
+            sessionQueue: [],
+            currentCardIdx: null,
+            sessionTotal: 0,
+            intervals: [1, 3, 7, 14, 30],
+            batchSize: 50, 
+            voices: [],
+
+            // --- INIT ---
+            init: async function() {
+                const firebaseApp = initializeApp(firebaseConfig);
+                const auth = getAuth(firebaseApp);
+                this.firestore = getFirestore(firebaseApp);
+
+                // Sign in anonymously to get database access
+                await signInAnonymously(auth);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        // Check for saved login
+                        const savedUser = localStorage.getItem('pareto_username');
+                        if (savedUser) {
+                            this.userId = savedUser;
+                            this.completeLogin(savedUser, false);
+                        } else {
+                            document.getElementById('loader').style.display = 'none';
+                        }
+                    }
+                });
+
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.onvoiceschanged = () => this.voices = window.speechSynthesis.getVoices();
+                }
+                this.setupKeyboard();
+                this.setupGoalEdit();
+            },
+
+            // --- AUTH LOGIC ---
+            switchAuthTab: function(tab) {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                event.target.classList.add('active');
+                if(tab === 'login') {
+                    document.getElementById('login-form').style.display = 'block';
+                    document.getElementById('register-form').style.display = 'none';
+                } else {
+                    document.getElementById('login-form').style.display = 'none';
+                    document.getElementById('register-form').style.display = 'block';
+                }
+            },
+
+            handleEnter: function(e, type) {
+                if (e.key === 'Enter') {
+                    if (type === 'login') this.login();
+                    else this.register();
+                }
+            },
+
+            register: async function() {
+                const user = document.getElementById('reg-user').value.trim().toLowerCase();
+                const pin = document.getElementById('reg-pin').value.trim();
+                const err = document.getElementById('reg-error');
+                
+                if (user.length < 3 || pin.length < 4) { err.textContent = "User: 3+ chars, PIN: 4+ chars."; return; }
+                
+                // CHECK IF TAKEN (Look for user's metadata file)
+                try {
+                    const docRef = doc(this.firestore, 'users', user, 'info', 'meta');
+                    const snap = await getDoc(docRef);
+                    
+                    if (snap.exists()) {
+                        err.textContent = "❌ Username taken! Choose another.";
+                    } else {
+                        // Create Account
+                        await setDoc(docRef, { pin: pin, created: new Date().toISOString() });
+                        this.completeLogin(user, true);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    err.textContent = "Connection Error. Check rules.";
+                }
+            },
+
+            login: async function() {
+                const user = document.getElementById('login-user').value.trim().toLowerCase();
+                const pin = document.getElementById('login-pin').value.trim();
+                
+                if(!user || !pin) { alert("Please fill all fields"); return; }
+
+                try {
+                    const docRef = doc(this.firestore, 'users', user, 'info', 'meta');
+                    const snap = await getDoc(docRef);
+                    
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        if (data.pin == pin) { // Use loose equality for string/number safety
+                            this.completeLogin(user, true);
+                        } else {
+                            alert("Wrong PIN! 🔒");
+                        }
+                    } else {
+                        alert("User not found. Please create an account.");
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Connection Error. Ensure you are online.");
+                }
+            },
+
+            completeLogin: function(username, shouldLoad) {
+                this.userId = username;
+                localStorage.setItem('pareto_username', username);
+                
+                // UI Updates
+                document.getElementById('auth-modal').style.display = 'none';
+                document.getElementById('app-container').classList.add('authenticated');
+                document.getElementById('display-username').textContent = username;
+                
+                if (shouldLoad) this.loadFromCloud();
+                else this.loadFromCloud(); // Always load on complete login
+            },
+
+            logout: function() {
+                localStorage.removeItem('pareto_username');
+                location.reload();
+            },
+
+            // --- CLOUD STORAGE ---
+            loadFromCloud: async function() {
+                if (!this.firestore || !this.userId) return;
+                this.showStatus('syncing');
+                document.getElementById('loader').style.display = 'flex';
+
+                try {
+                    // Path: users/{username}/flashcards/main
+                    const docRef = doc(this.firestore, 'users', this.userId, 'flashcards', 'main');
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        this.db = data.cards || [];
+                        this.goal = data.goal || 1000;
+                    } else {
+                        console.log("No data. Loading starter.");
+                        this.loadStarterPack();
+                    }
+                } catch (error) { console.error(error); this.showStatus('error'); }
+                finally {
+                    document.getElementById('loader').style.display = 'none';
+                    this.updateDashboard(); 
+                    this.showStatus('saved');
+                }
+            },
+
+            saveToCloud: async function() {
+                if (!this.firestore || !this.userId) return;
+                this.showStatus('syncing');
+                try {
+                    const docRef = doc(this.firestore, 'users', this.userId, 'flashcards', 'main');
+                    await setDoc(docRef, { cards: this.db, goal: this.goal, updated: new Date().toISOString() });
+                    this.showStatus('saved');
+                } catch (error) { console.error(error); this.showStatus('error'); }
+                this.updateDashboard();
+            },
+
+            showStatus: function(status) {
+                const el = document.getElementById('cloud-status');
+                if (status === 'syncing') { el.className = 'cloud-badge status-syncing'; el.innerText = '☁️ Syncing...'; }
+                else if (status === 'saved') { el.className = 'cloud-badge status-saved'; el.innerText = '☁️ Saved'; }
+                else { el.className = 'cloud-badge status-error'; el.innerText = '⚠️ Error'; }
+            },
+
+            loadStarterPack: function() {
+                const starter = [{ id: 1, f: "Der Mann", b: "The Man", c: "Der Mann ist groß", cefr: "A1", s: 'new', str: 0, due: 0 }];
+                this.db = starter; this.saveToCloud();
+            },
+
+            resetData: function() {
+                if(confirm("DELETE all data?")) { this.db = []; this.saveToCloud(); location.reload(); }
+            },
+
+            // --- CORE APP ---
+            speakWord: function(e) {
+                e.stopPropagation();
+                if (!('speechSynthesis' in window)) return;
+                const text = this.db[this.currentCardIdx].f;
+                const utterance = new SpeechSynthesisUtterance(text);
+                const germanVoice = this.voices.find(v => v.lang.includes('de'));
+                if (germanVoice) utterance.voice = germanVoice;
+                utterance.lang = 'de-DE';
+                utterance.rate = 0.9;
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(utterance);
+            },
+
+            setupGoalEdit: function() {
+                document.querySelector('.stat-box:last-child').addEventListener('click', () => {
+                    const g = prompt("Set goal:", this.goal);
+                    if(g) { this.goal = parseInt(g); this.saveToCloud(); }
+                });
+            },
+
+            updateDashboard: function() {
+                const now = Date.now();
+                const learned = this.db.filter(c => c.s === 'active' && c.str > 0).length;
+                const due = this.db.filter(c => c.s === 'active' && c.due <= now).length;
+                const isNew = this.db.filter(c => c.s === 'new').length;
+                document.getElementById('stat-learned').textContent = learned;
+                document.getElementById('stat-due').textContent = due;
+                document.getElementById('stat-new').textContent = isNew;
+                document.getElementById('stat-goal').textContent = this.goal;
+                const pct = Math.min(100, (learned / this.goal) * 100);
+                document.getElementById('total-progress').style.width = pct + "%";
+                document.getElementById('btn-start').disabled = (due === 0 && isNew === 0);
+            },
+
+            showScreen: function(id) {
+                document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+                document.getElementById(id).classList.add('active');
+            },
+            showVocabList: function() { this.showScreen('vocab'); this.renderVocabList(); },
+            showImport: function() { this.showScreen('import'); },
+            goHome: function() { this.showScreen('dashboard'); this.updateDashboard(); },
+
+            processImport: function() {
+                const txt = document.getElementById('import-area').value;
+                if (!txt.trim()) return;
+                const lines = txt.split(/[\n\r]+/);
+                let addedCount = 0; let dupCount = 0;
+                lines.forEach(line => {
+                    line = line.trim(); if(!line) return;
+                    const parts = []; let current = ''; let inQuote = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"') { inQuote = !inQuote; current += char; }
+                        else if (char === ',' && !inQuote) { parts.push(current); current = ''; }
+                        else { current += char; }
+                    }
+                    parts.push(current);
+                    if (parts.length >= 2) {
+                        const clean = (s) => s ? s.trim().replace(/^"|"$/g, '') : "";
+                        const f = clean(parts[0]); const b = clean(parts[1]); const c = parts[2] ? clean(parts[2]) : ""; const cefr = parts[3] ? clean(parts[3]) : "";
+                        const exists = this.db.some(card => card.f.toLowerCase() === f.toLowerCase() && card.b.toLowerCase() === b.toLowerCase());
+                        if (!exists && f && b) { this.db.push({ id: Date.now()+Math.random(), f: f, b: b, c: c, cefr: cefr, s: 'new', str: 0, due: 0 }); addedCount++; } else { dupCount++; }
+                    }
+                });
+                alert(`Added ${addedCount} cards. Skipped ${dupCount} duplicates.`);
+                document.getElementById('import-area').value = ""; this.saveToCloud(); this.goHome();
+            },
+
+            startSession: function() {
+                const now = Date.now();
+                let due = this.db.map((c, i) => ({...c, idx: i})).filter(c => c.s === 'active' && c.due <= now).map(c => c.idx);
+                let nevv = this.db.map((c, i) => ({...c, idx: i})).filter(c => c.s === 'new').map(c => c.idx);
+                let batch = due.slice(0, this.batchSize);
+                if (batch.length < this.batchSize) batch = batch.concat(nevv.slice(0, this.batchSize - batch.length));
+                if (batch.length === 0) { alert("No cards due!"); return; }
+                this.sessionQueue = batch.sort(() => Math.random() - 0.5);
+                this.sessionTotal = batch.length;
+                this.showScreen('study');
+                this.loadNextCard();
+            },
+
+            loadNextCard: function() {
+                if (this.sessionQueue.length === 0) { alert("Session Complete!"); this.goHome(); return; }
+                document.getElementById('session-counter').textContent = (this.sessionTotal - this.sessionQueue.length + 1);
+                const el = document.getElementById('card-element');
+                el.classList.remove('is-flipped');
+                document.getElementById('controls-area').classList.remove('visible');
+                this.currentCardIdx = this.sessionQueue[0];
+                const card = this.db[this.currentCardIdx];
+                document.getElementById('card-front-text').textContent = card.f;
+                const badgeEl = document.getElementById('card-cefr-badge');
+                if (card.cefr) {
+                    badgeEl.style.display = 'block'; badgeEl.textContent = card.cefr; badgeEl.className = 'cefr-badge-card'; 
+                    const lvl = card.cefr.toLowerCase();
+                    if(lvl.includes('a1')) badgeEl.classList.add('cefr-a1');
+                    else if(lvl.includes('a2')) badgeEl.classList.add('cefr-a2');
+                    else if(lvl.includes('b1')) badgeEl.classList.add('cefr-b1');
+                    else if(lvl.includes('b2')) badgeEl.classList.add('cefr-b2');
+                    else badgeEl.classList.add('cefr-u');
+                } else { badgeEl.style.display = 'none'; }
+                document.getElementById('card-back-text').textContent = "";
+                document.getElementById('card-context-text').textContent = "";
+                setTimeout(() => {
+                    document.getElementById('card-back-text').textContent = card.b;
+                    document.getElementById('card-context-text').textContent = card.c ? `"${card.c}"` : "";
+                }, 500);
+            },
+
+            flipCard: function() {
+                const el = document.getElementById('card-element');
+                const controls = document.getElementById('controls-area');
+                el.classList.toggle('is-flipped');
+                if (el.classList.contains('is-flipped')) { setTimeout(() => controls.classList.add('visible'), 200); } else { controls.classList.remove('visible'); }
+            },
+
+            answerCard: function(correct) {
+                if (!document.getElementById('card-element').classList.contains('is-flipped')) return;
+                const card = this.db[this.currentCardIdx];
+                if (correct) {
+                    let s = card.str + 1;
+                    if (s >= this.intervals.length) s = this.intervals.length - 1;
+                    card.s = 'active'; card.str = s;
+                    card.due = Date.now() + (this.intervals[s - 1] * 86400000);
+                    this.sessionQueue.shift();
+                } else {
+                    card.s = 'active'; card.str = 0; card.due = Date.now();
+                    this.sessionQueue.push(this.sessionQueue.shift());
+                }
+                this.saveToCloud(); this.loadNextCard();
+            },
+
+            renderVocabList: function() {
+                const q = document.getElementById('search-input').value.toLowerCase();
+                const tbody = document.getElementById('vocab-table-body');
+                tbody.innerHTML = '';
+                const filtered = this.db.filter(c => c.f.toLowerCase().includes(q) || c.b.toLowerCase().includes(q));
+                document.getElementById('table-count').innerText = `Count: ${filtered.length}`;
+                document.getElementById('select-all').checked = false;
+                this.updateBulkButton();
+                filtered.forEach(c => {
+                    let badge = 'status-new'; let txt = 'New';
+                    if (c.s === 'active') { if (c.due <= Date.now()) { badge = 'status-due'; txt = 'Due'; } else { badge = 'status-active'; txt = 'Active'; } }
+                    let cefrClass = 'cefr-u';
+                    if (c.cefr) { const lvl = c.cefr.toLowerCase(); if(lvl.includes('a1')) cefrClass = 'cefr-a1'; else if(lvl.includes('a2')) cefrClass = 'cefr-a2'; else if(lvl.includes('b1')) cefrClass = 'cefr-b1'; else if(lvl.includes('b2')) cefrClass = 'cefr-b2'; }
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td><input type="checkbox" class="select-row" value="${c.id}" onchange="app.updateBulkButton()"></td><td><b>${c.f}</b></td><td>${c.b}</td><td><span class="cefr-badge ${cefrClass}">${c.cefr||"?"}</span></td><td>${c.str}</td><td style="text-align: right;"><button class="btn-sm btn-danger" onclick="app.deleteWord(${c.id})">🗑️</button></td>`;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            deleteWord: function(id) { if(confirm("Delete word?")) { this.db = this.db.filter(c => c.id !== id); this.saveToCloud(); this.renderVocabList(); } },
+            toggleSelectAll: function() { const isChecked = document.getElementById('select-all').checked; document.querySelectorAll('.select-row').forEach(cb => cb.checked = isChecked); this.updateBulkButton(); },
+            updateBulkButton: function() { const count = document.querySelectorAll('.select-row:checked').length; const btn = document.getElementById('bulk-actions'); const countSpan = document.getElementById('selected-count'); if (count > 0) { btn.style.display = 'block'; countSpan.innerText = count; } else { btn.style.display = 'none'; } },
+            deleteSelected: function() { const checkedBoxes = document.querySelectorAll('.select-row:checked'); const count = checkedBoxes.length; if (count === 0) return; if (confirm(`Delete ${count} words?`)) { const idsToDelete = Array.from(checkedBoxes).map(cb => parseFloat(cb.value)); this.db = this.db.filter(c => !idsToDelete.includes(c.id)); this.saveToCloud(); this.renderVocabList(); } },
+            setupKeyboard: function() { document.addEventListener('keydown', (e) => { if (!document.getElementById('study').classList.contains('active')) return; if (e.code === 'Space') { this.flipCard(); e.preventDefault(); } else if (e.code === 'ArrowRight') this.answerCard(true); else if (e.code === 'ArrowLeft') this.answerCard(false); }); }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+</html>
