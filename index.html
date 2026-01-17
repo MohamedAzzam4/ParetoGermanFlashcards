@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pareto German (Library Edition)</title>
+    <title>Pareto German (Visual Fix)</title>
     <style>
         :root {
             --primary: #6366f1; --primary-dark: #4f46e5;
@@ -21,14 +21,12 @@
         .screen { display: none; animation: fadeIn 0.3s; }
         .screen.active { display: block; }
 
-        /* --- Global Dashboard --- */
+        /* --- Dashboard --- */
         .hero-section {
             background: white; border-radius: 20px; padding: 25px; 
             margin-bottom: 30px; text-align: center; 
             box-shadow: var(--shadow); border: 1px solid #e5e7eb; position: relative;
         }
-        
-        /* Cloud Status Badge */
         .cloud-badge {
             position: absolute; top: 15px; right: 15px;
             font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 20px;
@@ -37,17 +35,16 @@
         .status-syncing { background: #e0f2fe; color: #0284c7; }
         .status-saved { background: #dcfce7; color: #166534; }
         .status-error { background: #fee2e2; color: #991b1b; }
-
+        
         .hero-title { margin-bottom: 10px; font-size: 1.5rem; color: var(--text-main); font-weight: 800; }
         
-        /* Goal Progress Bar */
+        /* Goal Bar */
         .goal-container { margin: 15px 0 25px 0; cursor: pointer; }
         .progress-bar { height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden; position: relative; }
         .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); width: 0%; transition: width 0.5s; }
         .goal-text { font-size: 0.85rem; color: var(--text-light); margin-top: 5px; display: flex; justify-content: space-between; }
 
         .global-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-
         .btn-global {
             border: none; padding: 15px; border-radius: 16px; 
             font-size: 1rem; font-weight: 700; cursor: pointer; color: white;
@@ -56,14 +53,12 @@
         }
         .btn-global:active { transform: scale(0.98); }
         .btn-global:disabled { background: #e5e7eb; color: #9ca3af; box-shadow: none; cursor: default; }
-        
         .bg-review { background: var(--primary); }
         .bg-new { background: var(--secondary); }
         .badge-count { background: rgba(255,255,255,0.25); padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; }
 
-        /* --- Deck Grid --- */
+        /* --- Decks --- */
         .deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-        
         .deck-card {
             background: white; border-radius: 16px; padding: 20px;
             box-shadow: var(--shadow); transition: all 0.2s; border: 1px solid #e5e7eb;
@@ -71,26 +66,35 @@
         }
         .deck-card:hover { transform: translateY(-3px); border-color: var(--primary); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
         
+        /* Edit Deck Icon */
+        .deck-edit-btn {
+            position: absolute; top: 10px; right: 10px;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: #f3f4f6; border: 1px solid #e5e7eb;
+            color: var(--text-light); display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem; cursor: pointer; z-index: 10; transition: all 0.2s;
+        }
+        .deck-edit-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
         .status-bar { height: 4px; width: 100%; position: absolute; top: 0; left: 0; }
         .status-active { background: var(--warning); }
         .status-done { background: var(--success); }
-
-        .deck-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
+        
+        .deck-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; margin-top: 10px; }
         .deck-title { font-weight: 700; font-size: 1.2rem; }
         .deck-count { font-size: 0.85rem; color: var(--text-light); background: #f3f4f6; padding: 4px 8px; border-radius: 6px; }
-
         .deck-info { font-size: 0.9rem; font-weight: 600; color: var(--text-light); }
         .highlight-due { color: var(--warning); font-weight: 800; }
         .highlight-new { color: var(--secondary); font-weight: 800; }
         .highlight-done { color: var(--success); font-weight: 800; }
 
-        /* --- Forms & Inputs --- */
+        /* --- Standard UI --- */
         .dashboard-card { background: white; border-radius: 16px; padding: 24px; box-shadow: var(--shadow); margin-bottom: 20px; }
         .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; font-weight: 600; }
         .btn-secondary { background: white; color: var(--text-main); border: 1px solid #e5e7eb; }
         .btn-sm { padding: 6px 12px; font-size: 0.9rem; width: auto; }
         .btn-danger { color: var(--danger); border-color: #fee2e2; background: #fef2f2; }
-        
+        .btn-warning { color: #b45309; border-color: #fcd34d; background: #fffbeb; }
         input, textarea, select { width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 10px; font-family: inherit; }
         label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: var(--text-light); }
 
@@ -101,23 +105,65 @@
         .tab-btn { flex: 1; padding: 10px; border: none; background: #e5e7eb; border-radius: 8px; cursor: pointer; font-weight: 600; color: #6b7280; }
         .tab-btn.active { background: var(--primary); color: white; }
 
-        /* --- Study Scene --- */
-        .scene { width: 100%; height: 320px; perspective: 1000px; margin: 20px 0; cursor: pointer; }
+        /* --- Study Scene (ROBUST FIX) --- */
+        .scene { 
+            width: 100%; 
+            height: 320px; 
+            perspective: 1000px; /* Essential for 3D */
+            margin: 20px 0; 
+            cursor: pointer; 
+        }
         @media (max-width: 600px) { .scene { height: 280px; } }
-        .card { width: 100%; height: 100%; position: relative; transition: transform 0.6s; transform-style: preserve-3d; }
+        
+        .card { 
+            width: 100%; 
+            height: 100%; 
+            position: relative; 
+            transition: transform 0.6s; 
+            transform-style: preserve-3d; /* CRITICAL */
+        }
         .card.is-flipped { transform: rotateY(180deg); }
-        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; background: white; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 20px; box-shadow: var(--shadow); padding: 20px; text-align: center; }
+        
+        .card-face { 
+            position: absolute; 
+            width: 100%; 
+            height: 100%; 
+            backface-visibility: hidden; /* CRITICAL - Hides back side */
+            -webkit-backface-visibility: hidden; /* Safari Support */
+            background: white; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            border-radius: 20px; 
+            box-shadow: var(--shadow); 
+            padding: 20px; 
+            text-align: center; 
+            top: 0; left: 0; /* CRITICAL - Stacking */
+        }
         .card-face.back { transform: rotateY(180deg); border: 2px solid var(--primary); }
+        
         .word-main { font-size: 2rem; font-weight: 800; color: var(--text-main); margin-bottom: 10px; }
         .word-context { font-style: italic; color: var(--text-light); font-size: 1rem; }
+        
+        /* --- Controls (Vibrant) --- */
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; opacity: 0; pointer-events: none; }
         .controls.visible { opacity: 1; pointer-events: auto; }
+        
+        .btn-control { 
+            padding: 20px; border-radius: 16px; border: none; font-size: 1.1rem; font-weight: 800; cursor: pointer; 
+            color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.1s;
+        }
+        .btn-control:active { transform: scale(0.96); box-shadow: none; }
+        .btn-fail { background-color: #ef4444; } /* Vibrant Red */
+        .btn-pass { background-color: #22c55e; } /* Vibrant Green */
 
         /* --- Table --- */
         .table-container { overflow-x: auto; max-height: 60vh; border: 1px solid #e5e7eb; border-radius: 8px; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; background: white; text-align: left; }
         th, td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
         th { background: #f9fafb; font-weight: 600; position: sticky; top: 0; }
+        .action-cell { display: flex; gap: 5px; justify-content: flex-end; }
         
         /* Utils */
         .cefr-badge { display: inline-block; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; color: white; }
@@ -131,10 +177,19 @@
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* System Log */
+        #system-log { 
+            position: fixed; bottom: 0; left: 0; width: 100%; 
+            background: #1f2937; color: #10b981; font-family: monospace; font-size: 0.75rem;
+            padding: 4px 10px; max-height: 100px; overflow-y: auto; z-index: 5000;
+            border-top: 1px solid #374151; opacity: 0.95; pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
+    <div id="system-log">System Initializing...</div>
     <div id="loader"><div class="spinner"></div><p style="margin-top: 15px; color: #6b7280;">Connecting...</p></div>
 
     <!-- AUTH -->
@@ -200,7 +255,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <h3>📂 My Decks</h3>
                 <div>
-                    <button class="btn-sm btn-secondary" onclick="app.showVocabList()">📝 Edit List</button>
+                    <button class="btn-sm btn-secondary" onclick="app.showVocabList(null)">📝 Edit All</button>
                     <button class="btn-sm btn-secondary" onclick="app.showImport()">➕ Add Deck</button>
                 </div>
             </div>
@@ -210,13 +265,13 @@
                 <!-- Decks injected here -->
             </div>
             
-            <button class="btn-sm btn-secondary" style="margin-top: 30px; width: 100%; color: #9ca3af;" onclick="app.runDiagnostics()">🛠️ Fix Data Issues</button>
+            <button class="btn-sm btn-secondary btn-warning" style="margin-top: 30px; width: 100%;" onclick="app.runDiagnostics()">🛠️ Fix Data Issues</button>
         </div>
 
         <!-- STUDY SCREEN -->
         <div id="study" class="screen">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: var(--text-light); font-weight: 600;"><span id="deck-label">General</span>: <span id="card-counter">1</span></span>
+                <span style="color: var(--text-light); font-weight: 600;"><span id="deck-label">General</span>: <span id="session-counter">1</span></span>
                 <button onclick="app.goHome()" style="background:none; border:none; cursor:pointer;">Exit</button>
             </div>
 
@@ -236,12 +291,12 @@
             </div>
 
             <div class="controls" id="controls-area">
-                <button class="btn" style="background:#fee2e2; color:#ef4444;" onclick="app.answerCard(false)">Again</button>
-                <button class="btn" style="background:#dcfce7; color:#166534;" onclick="app.answerCard(true)">Good</button>
+                <button class="btn-control btn-fail" onclick="app.answerCard(false)">Again</button>
+                <button class="btn-control btn-pass" onclick="app.answerCard(true)">Good</button>
             </div>
         </div>
 
-        <!-- VIEW LIST (WITH EDIT) -->
+        <!-- VIEW LIST (WITH EDIT & DELETE) -->
         <div id="list-view" class="screen">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <h3 id="list-title">All Words</h3>
@@ -257,7 +312,7 @@
             <p id="table-count" style="margin-top: 10px; color: var(--text-light); font-size: 0.9rem;"></p>
         </div>
 
-        <!-- EDIT WORD MODAL (New) -->
+        <!-- EDIT WORD MODAL -->
         <div id="edit-screen" class="screen">
             <div class="dashboard-card">
                 <h2>✏️ Edit Word</h2>
@@ -290,9 +345,8 @@
 
                 <div style="display:flex; gap:10px; margin-top:15px;">
                     <button class="btn" onclick="app.saveWordEdit()">Save Changes</button>
-                    <button class="btn btn-secondary" onclick="app.showVocabList()">Cancel</button>
+                    <button class="btn btn-secondary" onclick="app.showVocabList(undefined)">Cancel</button>
                 </div>
-                <button class="btn-sm btn-danger" style="margin-top:20px; width:auto;" onclick="app.deleteWordFromEdit()">🗑️ Delete Word</button>
             </div>
         </div>
 
@@ -335,6 +389,7 @@
         window.app = {
             db: [], firestore: null, userId: null, unsubscribe: null,
             sessionQueue: [], currentCardIdx: 0, intervals: [1, 3, 7, 14, 30], batchSize: 50, voices: [], goal: 1000,
+            currentDeckFilter: undefined, // STATE: Which deck are we editing? (undefined = all/none, set string for deck)
 
             init: async function() {
                 const firebaseApp = initializeApp(firebaseConfig);
@@ -494,6 +549,7 @@
                     }
 
                     div.innerHTML = `
+                        <div class="deck-edit-btn" onclick="event.stopPropagation(); app.viewList('${name}')" title="Edit Deck">✏️</div>
                         <div class="status-bar ${barClass}"></div>
                         <div class="deck-header"><div class="deck-title">${name}</div><div class="deck-count">${d.total}</div></div>
                         <div class="deck-info">${statusHtml}</div>
@@ -546,17 +602,24 @@
                 this.currentCardIdx = this.sessionQueue[0];
                 const card = this.db[this.currentCardIdx];
 
-                document.getElementById('card-front-text').textContent = card.f;
-                // Badges
+                // STANDARD IDS & SAFETY
+                const frontEl = document.getElementById('card-front-text');
+                if(frontEl) frontEl.textContent = card.f || "...";
+                
                 const badge = document.getElementById('card-cefr-badge');
-                if(card.cefr) { badge.style.display='block'; badge.innerText=card.cefr; badge.className='cefr-badge-card'; if(card.cefr.includes('A1')) badge.classList.add('cefr-a1'); }
-                else badge.style.display='none';
+                if(badge) {
+                    if(card.cefr) { badge.style.display='block'; badge.innerText=card.cefr; badge.className='cefr-badge-card'; if(card.cefr.includes('A1')) badge.classList.add('cefr-a1'); }
+                    else badge.style.display='none';
+                }
 
-                document.getElementById('card-back-text').textContent = "";
-                document.getElementById('card-context-text').textContent = "";
+                const backEl = document.getElementById('card-back-text');
+                const contextEl = document.getElementById('card-context-text');
+                if(backEl) backEl.textContent = "";
+                if(contextEl) contextEl.textContent = "";
+                
                 setTimeout(() => {
-                    document.getElementById('card-back-text').textContent = card.b;
-                    document.getElementById('card-context-text').textContent = card.c || "";
+                    if(backEl) backEl.textContent = card.b || "";
+                    if(contextEl) contextEl.textContent = card.c || "";
                 }, 500);
             },
 
@@ -570,11 +633,18 @@
             answerCard: function(correct) {
                 const card = this.db[this.currentCardIdx];
                 if (correct) {
+                    // Success: Move to active, schedule next review
                     card.s = 'active'; card.str++;
                     card.due = Date.now() + (this.intervals[Math.min(card.str, this.intervals.length-1)] * 86400000);
                     this.sessionQueue.shift();
                 } else {
-                    card.s = 'active'; card.str = 0; card.due = Date.now();
+                    // Fail logic: if it WAS new, keep it new (don't set to active). If active, reset streak.
+                    if (card.s === 'active') {
+                        card.str = 0; 
+                        card.due = Date.now();
+                    }
+                    // For new cards, we just push them back to the queue without changing status to 'active' or setting a date yet
+                    // This keeps them in the "New" bucket until "Good" is clicked.
                     this.sessionQueue.push(this.sessionQueue.shift());
                 }
                 this.saveToCloud(); this.loadNextCard();
@@ -585,44 +655,55 @@
                 this.showVocabList(deckName);
             },
 
-            showVocabList: function(filterDeck = null) {
+            showVocabList: function(filterDeck) {
+                // FIXED LOGIC: Only set filter if explicit argument passed
+                // If filterDeck is undefined, we keep existing filter (e.g. from Cancel)
+                if (filterDeck !== undefined) this.currentDeckFilter = filterDeck;
+                
                 this.showScreen('list-view');
-                this.renderVocabList(filterDeck);
+                this.renderVocabList();
             },
 
-            renderVocabList: function(filterDeck = null) {
-                const q = document.getElementById('search-input').value.toLowerCase();
-                const tbody = document.getElementById('vocab-table-body'); tbody.innerHTML = '';
-                
-                let filtered = this.db.filter(c => (c.f && c.f.toLowerCase().includes(q)) || (c.b && c.b.toLowerCase().includes(q)));
-                if(filterDeck) {
-                    filtered = filtered.filter(c => c.deck === filterDeck);
-                    document.getElementById('list-title').textContent = filterDeck;
-                } else {
-                    document.getElementById('list-title').textContent = "All Words";
-                }
-                
-                document.getElementById('table-count').innerText = `Count: ${filtered.length}`;
+            renderVocabList: function() {
+                try {
+                    const q = document.getElementById('search-input').value.toLowerCase();
+                    const tbody = document.getElementById('vocab-table-body'); tbody.innerHTML = '';
+                    
+                    let filtered = this.db.filter(c => (c.f && c.f.toLowerCase().includes(q)) || (c.b && c.b.toLowerCase().includes(q)));
+                    
+                    // FIXED: Apply stored filter
+                    if(this.currentDeckFilter) {
+                        filtered = filtered.filter(c => c.deck === this.currentDeckFilter);
+                        document.getElementById('list-title').textContent = this.currentDeckFilter;
+                    } else {
+                        document.getElementById('list-title').textContent = "All Words";
+                    }
+                    
+                    const countEl = document.getElementById('table-count');
+                    if(countEl) countEl.innerText = `Count: ${filtered.length}`;
 
-                filtered.forEach(c => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `<td><b>${c.f}</b></td><td>${c.b}</td><td>${c.deck||"General"}</td>
-                    <td style="text-align: right;"><button class="btn-sm btn-secondary" onclick="app.editWord(${c.id})">✏️</button></td>`;
-                    tbody.appendChild(tr);
-                });
+                    filtered.forEach(c => {
+                        const tr = document.createElement('tr');
+                        // FIXED: Added Delete Icon 🗑️ next to Edit Icon
+                        tr.innerHTML = `<td><b>${c.f||""}</b></td><td>${c.b||""}</td><td>${c.deck||"General"}</td>
+                        <td class="action-cell">
+                            <button class="btn-sm btn-secondary" onclick="app.editWord(${c.id})">✏️</button>
+                            <button class="btn-sm btn-danger" onclick="app.deleteWord(${c.id})">🗑️</button>
+                        </td>`;
+                        tbody.appendChild(tr);
+                    });
+                } catch(e) { console.error("Render List Error", e); this.log("List Err: "+e.message); }
             },
 
             editWord: function(id) {
                 const card = this.db.find(c => c.id === id);
                 if(!card) return;
-                
                 document.getElementById('edit-id').value = card.id;
                 document.getElementById('edit-f').value = card.f;
                 document.getElementById('edit-b').value = card.b;
                 document.getElementById('edit-c').value = card.c || "";
                 document.getElementById('edit-cefr').value = card.cefr || "A1";
                 document.getElementById('edit-deck').value = card.deck || "General";
-                
                 this.showScreen('edit-screen');
             },
 
@@ -636,16 +717,24 @@
                     card.cefr = document.getElementById('edit-cefr').value;
                     card.deck = document.getElementById('edit-deck').value;
                     this.saveToCloud();
-                    this.showVocabList(); // Go back to list
+                    this.showVocabList(undefined); // undefined keeps current filter
                 }
             },
 
+            deleteWord: function(id) {
+                if(confirm("Delete this word?")) {
+                    this.db = this.db.filter(c => c.id !== id);
+                    this.saveToCloud();
+                    this.renderVocabList(); // Don't need showVocabList here, just re-render is enough
+                }
+            },
+            
             deleteWordFromEdit: function() {
                 const id = parseFloat(document.getElementById('edit-id').value);
                 if(confirm("Delete this word?")) {
                     this.db = this.db.filter(c => c.id !== id);
                     this.saveToCloud();
-                    this.showVocabList();
+                    this.showVocabList(undefined);
                 }
             },
 
@@ -669,7 +758,6 @@
                         const clean = (s) => s ? s.trim().replace(/^"|"$/g, '') : "";
                         const f = clean(parts[0]); const b = clean(parts[1]); const c = parts[2] ? clean(parts[2]) : ""; const cefr = parts[3] ? clean(parts[3]) : "";
                         
-                        // Check duplicates
                         const exists = this.db.some(card => card.f.toLowerCase() === f.toLowerCase() && card.b.toLowerCase() === b.toLowerCase());
                         if (!exists && f && b) { 
                             this.db.push({ id: Date.now()+Math.random(), f: f, b: b, c: c, cefr: cefr, deck: deckName, s: 'new', str: 0, due: 0 }); 
@@ -690,9 +778,11 @@
                 if(fix>0) { this.saveToCloud(); alert(`Fixed ${fix} items.`); } else alert("Data OK.");
             },
             resetData: function() { if(confirm("Delete ALL data?")) { this.db = []; this.saveToCloud(); } },
+            log: function(msg) { const box = document.getElementById('system-log'); if(box) { box.innerText = msg; console.log(msg); } },
             
             showScreen: function(id) { document.querySelectorAll('.screen').forEach(el => el.classList.remove('active')); document.getElementById(id).classList.add('active'); },
-            showVocabList: function() { this.showScreen('list-view'); this.renderVocabList(); }, showImport: function() { this.showScreen('import'); }, goHome: function() { this.showScreen('library'); this.renderLibrary(); },
+            showImport: function() { this.showScreen('import'); }, 
+            goHome: function() { this.currentDeckFilter = null; this.showScreen('library'); this.renderLibrary(); },
             setupKeyboard: function() { document.addEventListener('keydown', (e) => { if (!document.getElementById('study').classList.contains('active')) return; if (e.code === 'Space') { this.flipCard(); e.preventDefault(); } else if (e.code === 'ArrowRight') this.answerCard(true); else if (e.code === 'ArrowLeft') this.answerCard(false); }); }
         };
 
