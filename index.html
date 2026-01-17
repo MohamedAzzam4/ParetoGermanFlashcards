@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pareto German (Visual Fix)</title>
+    <title>Pareto German (Cram Mode)</title>
     <style>
         :root {
             --primary: #6366f1; --primary-dark: #4f46e5;
@@ -57,6 +57,19 @@
         .bg-new { background: var(--secondary); }
         .badge-count { background: rgba(255,255,255,0.25); padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; }
 
+        /* --- Mode Selector --- */
+        .mode-label { font-size: 0.85rem; font-weight: 700; color: var(--text-light); margin-bottom: 8px; text-align: left; display: block; }
+        .mode-selector {
+            display: flex; background: #f3f4f6; padding: 4px; border-radius: 12px; margin-bottom: 20px;
+        }
+        .mode-btn {
+            flex: 1; border: none; background: transparent; padding: 10px; border-radius: 10px;
+            cursor: pointer; font-weight: 600; color: var(--text-light); transition: 0.2s; font-size: 0.9rem;
+        }
+        .mode-btn:hover { color: var(--primary); }
+        .mode-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+
         /* --- Decks --- */
         .deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
         .deck-card {
@@ -105,7 +118,7 @@
         .tab-btn { flex: 1; padding: 10px; border: none; background: #e5e7eb; border-radius: 8px; cursor: pointer; font-weight: 600; color: #6b7280; }
         .tab-btn.active { background: var(--primary); color: white; }
 
-        /* --- Study Scene (ROBUST FIX) --- */
+        /* --- Study Scene --- */
         .scene { 
             width: 100%; 
             height: 320px; 
@@ -128,8 +141,8 @@
             position: absolute; 
             width: 100%; 
             height: 100%; 
-            backface-visibility: hidden; /* CRITICAL - Hides back side */
-            -webkit-backface-visibility: hidden; /* Safari Support */
+            backface-visibility: hidden; /* CRITICAL */
+            -webkit-backface-visibility: hidden;
             background: white; 
             display: flex; 
             flex-direction: column; 
@@ -139,7 +152,7 @@
             box-shadow: var(--shadow); 
             padding: 20px; 
             text-align: center; 
-            top: 0; left: 0; /* CRITICAL - Stacking */
+            top: 0; left: 0; 
         }
         .card-face.back { transform: rotateY(180deg); border: 2px solid var(--primary); }
         
@@ -155,8 +168,8 @@
             color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.1s;
         }
         .btn-control:active { transform: scale(0.96); box-shadow: none; }
-        .btn-fail { background-color: #ef4444; } /* Vibrant Red */
-        .btn-pass { background-color: #22c55e; } /* Vibrant Green */
+        .btn-fail { background-color: #ef4444; } 
+        .btn-pass { background-color: #22c55e; } 
 
         /* --- Table --- */
         .table-container { overflow-x: auto; max-height: 60vh; border: 1px solid #e5e7eb; border-radius: 8px; margin-top: 10px; }
@@ -169,7 +182,7 @@
         .cefr-badge { display: inline-block; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; color: white; }
         .cefr-badge-card { position: absolute; top: 20px; left: 20px; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .cefr-a1 { background-color: #22c55e; } .cefr-a2 { background-color: #10b981; } .cefr-b1 { background-color: #3b82f6; } .cefr-u { background-color: #9ca3af; }
-        .audio-container { position: absolute; top: 20px; right: 20px; z-index: 10; }
+        .audio-container { position: absolute; top: 20px; right: 20px; z-index: 10; display: none; } 
         .btn-audio { background: rgba(238, 242, 255, 0.8); color: var(--primary); border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
         /* Loader */
@@ -239,6 +252,14 @@
                     <div class="goal-text"><span>Learned words</span><span>Target 🎯</span></div>
                 </div>
 
+                <!-- Study Mode Selector -->
+                <span class="mode-label">Face Side:</span>
+                <div class="mode-selector">
+                    <button class="mode-btn active" onclick="app.setStudyMode('DE')" id="mode-de">🇩🇪 German</button>
+                    <button class="mode-btn" onclick="app.setStudyMode('EN')" id="mode-en">🇬🇧 English</button>
+                    <button class="mode-btn" onclick="app.setStudyMode('MIX')" id="mode-mix">🔀 Mixed</button>
+                </div>
+
                 <div class="global-actions">
                     <button id="btn-global-review" class="btn-global bg-review" onclick="app.startSession('global_review', null)">
                         <span>📚 Review All</span>
@@ -279,11 +300,14 @@
                 <div class="card" id="card-element">
                     <div class="card-face front">
                         <div id="card-cefr-badge" class="cefr-badge-card cefr-u">A1</div>
-                        <div class="audio-container"><button class="btn-audio" onclick="app.speakWord(event)">🔊</button></div>
+                        <!-- Front Audio -->
+                        <div class="audio-container" id="front-audio-btn"><button class="btn-audio" onclick="app.speakWord(event)">🔊</button></div>
                         <div class="word-main" id="card-front-text">...</div>
                         <small style="color:#9ca3af; margin-top:10px;">Tap to flip</small>
                     </div>
                     <div class="card-face back">
+                        <!-- Back Audio -->
+                        <div class="audio-container" id="back-audio-btn" style="top: 10px; right: 10px;"><button class="btn-audio" onclick="app.speakWord(event)">🔊</button></div>
                         <div class="word-main" id="card-back-text">...</div>
                         <div id="card-context-text" class="word-context"></div>
                     </div>
@@ -389,7 +413,8 @@
         window.app = {
             db: [], firestore: null, userId: null, unsubscribe: null,
             sessionQueue: [], currentCardIdx: 0, intervals: [1, 3, 7, 14, 30], batchSize: 50, voices: [], goal: 1000,
-            currentDeckFilter: undefined, // STATE: Which deck are we editing? (undefined = all/none, set string for deck)
+            currentDeckFilter: undefined, // undefined=all/none, string=deck name
+            studyMode: 'DE', // 'DE', 'EN', 'MIX'
 
             init: async function() {
                 const firebaseApp = initializeApp(firebaseConfig);
@@ -541,11 +566,14 @@
                         barClass = 'status-done';
                         if (d.nextReview !== Infinity) {
                             const days = Math.ceil((d.nextReview - now) / 86400000);
-                            statusHtml = `<span class="highlight-done">✅ Next: ${days<=1?'tomorrow':days+' days'}</span>`;
+                            const dayText = days <= 1 ? "tomorrow" : `in ${days} days`;
+                            // ADDED HINT FOR CRAM MODE
+                            statusHtml = `<span class="highlight-done">✅ Next: ${dayText}</span><div style="font-size:0.8rem; color:#6366f1; margin-top:5px;">Tap to Review Ahead ⏩</div>`;
                         } else {
-                            statusHtml = `<span class="highlight-done">✅ All Done</span>`;
+                            statusHtml = `<span class="highlight-done">✅ All Done</span><div style="font-size:0.8rem; color:#6366f1; margin-top:5px;">Tap to Practice ⏩</div>`;
                         }
-                        action = `app.viewList('${name}')`;
+                        // CLICKING FINISHED DECK = CRAM MODE
+                        action = `app.startSession('deck_cram', '${name}')`;
                     }
 
                     div.innerHTML = `
@@ -562,6 +590,15 @@
                 const dl = document.getElementById('deck-suggestions');
                 dl.innerHTML = '';
                 Object.keys(decks).forEach(d => { dl.innerHTML += `<option value="${d}">`; });
+            },
+
+            // --- STUDY MODES ---
+            setStudyMode: function(mode) {
+                this.studyMode = mode;
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                if (mode === 'DE') document.getElementById('mode-de').classList.add('active');
+                if (mode === 'EN') document.getElementById('mode-en').classList.add('active');
+                if (mode === 'MIX') document.getElementById('mode-mix').classList.add('active');
             },
 
             // --- SESSION ---
@@ -583,6 +620,11 @@
                     pool = [...due, ...newC];
                     document.getElementById('deck-label').textContent = deckName;
                 }
+                else if (mode === 'deck_cram') {
+                    // NEW: Cram mode grabs ALL cards in deck
+                    pool = this.db.filter(c => c.deck === deckName);
+                    document.getElementById('deck-label').textContent = deckName + " (Cram)";
+                }
 
                 if (pool.length === 0) { alert("Nothing to study here!"); return; }
 
@@ -602,9 +644,24 @@
                 this.currentCardIdx = this.sessionQueue[0];
                 const card = this.db[this.currentCardIdx];
 
+                // DETERMINE SIDE based on Study Mode
+                let isFrontGerman = true;
+                if (this.studyMode === 'EN') isFrontGerman = false;
+                else if (this.studyMode === 'MIX') isFrontGerman = Math.random() > 0.5;
+
+                const frontText = isFrontGerman ? card.f : card.b;
+                const backText = isFrontGerman ? card.b : card.f;
+                
+                // Show/Hide Audio buttons based on spoiler avoidance
+                const frontAudio = document.getElementById('front-audio-btn');
+                const backAudio = document.getElementById('back-audio-btn');
+                
+                frontAudio.style.display = isFrontGerman ? 'block' : 'none';
+                backAudio.style.display = 'block'; // Always available on back flip
+
                 // STANDARD IDS & SAFETY
                 const frontEl = document.getElementById('card-front-text');
-                if(frontEl) frontEl.textContent = card.f || "...";
+                if(frontEl) frontEl.textContent = frontText || "...";
                 
                 const badge = document.getElementById('card-cefr-badge');
                 if(badge) {
@@ -618,7 +675,7 @@
                 if(contextEl) contextEl.textContent = "";
                 
                 setTimeout(() => {
-                    if(backEl) backEl.textContent = card.b || "";
+                    if(backEl) backEl.textContent = backText || "";
                     if(contextEl) contextEl.textContent = card.c || "";
                 }, 500);
             },
