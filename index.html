@@ -1494,12 +1494,9 @@
                 const frontText = isFrontGerman ? card.f : card.b;
                 const backText = isFrontGerman ? card.b : card.f;
 
-                // Show/Hide Audio buttons based on spoiler avoidance
-                const frontAudio = document.getElementById('front-audio-btn');
-                const backAudio = document.getElementById('back-audio-btn');
-
-                frontAudio.style.display = isFrontGerman ? 'block' : 'none';
-                backAudio.style.display = 'block'; // Always available on back flip
+                // Always show audio buttons — speakWord() always pronounces the German word (card.f)
+                document.getElementById('front-audio-btn').style.display = 'block';
+                document.getElementById('back-audio-btn').style.display = 'block';
 
                 // STANDARD IDS & SAFETY
                 const frontEl = document.getElementById('card-front-text');
