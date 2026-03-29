@@ -512,11 +512,11 @@
             font-size: 1rem;
         }
 
-        /* --- Controls (Vibrant) --- */
+        /* --- Controls (Anki-style) --- */
         .controls {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
             opacity: 0;
             pointer-events: none;
         }
@@ -526,11 +526,29 @@
             pointer-events: auto;
         }
 
+        .btn-control-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .review-time {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #6b7280;
+            background: #e5e7eb;
+            padding: 2px 8px;
+            border-radius: 20px;
+            letter-spacing: 0.02em;
+        }
+
         .btn-control {
-            padding: 20px;
-            border-radius: 16px;
+            width: 100%;
+            padding: 14px 6px;
+            border-radius: 14px;
             border: none;
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             font-weight: 800;
             cursor: pointer;
             color: white;
@@ -543,13 +561,114 @@
             box-shadow: none;
         }
 
-        .btn-fail {
-            background-color: #ef4444;
+        .btn-again  { background-color: #ef4444; }
+        .btn-hard   { background-color: #f97316; }
+        .btn-good   { background-color: #22c55e; }
+        .btn-easy   { background-color: #6366f1; }
+
+        @media (max-width: 600px) {
+            .controls { grid-template-columns: repeat(2, 1fr); gap: 8px; }
         }
 
-        .btn-pass {
-            background-color: #22c55e;
+        /* --- Folders --- */
+        .folder-section {
+            margin-bottom: 20px;
         }
+
+        .folder-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: border-color 0.2s;
+        }
+
+        .folder-header:hover { border-color: var(--primary); }
+
+        .folder-chevron {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            transition: transform 0.2s;
+        }
+
+        .folder-chevron.open { transform: rotate(90deg); }
+
+        .folder-name {
+            flex: 1;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-main);
+        }
+
+        .folder-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .folder-action-btn {
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 3px 7px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            color: var(--text-light);
+            transition: all 0.15s;
+        }
+
+        .folder-action-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .folder-decks {
+            padding-left: 16px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+            margin-bottom: 10px;
+        }
+
+        .folder-decks.collapsed { display: none; }
+
+        /* Move-to-folder modal */
+        #folder-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); z-index: 4000;
+            display: none; justify-content: center; align-items: center;
+        }
+
+        #folder-modal.open { display: flex; }
+
+        .folder-modal-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 360px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .folder-modal-card h3 { margin-bottom: 14px; }
+
+        .folder-option {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.15s;
+        }
+
+        .folder-option:hover { background: var(--primary); color: white; border-color: var(--primary); }
 
         /* --- Table --- */
         .table-container {
@@ -800,19 +919,29 @@
             <!-- Toolbar -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <h3>📂 My Decks</h3>
-                <div>
+                <div style="display:flex;gap:8px;">
                     <button class="btn-sm btn-secondary" onclick="app.showVocabList(null)">📝 Edit All</button>
+                    <button class="btn-sm btn-secondary" onclick="app.createFolder()">📁 Folder</button>
                     <button class="btn-sm btn-secondary" onclick="app.showImport()">➕ Add Deck</button>
                 </div>
             </div>
 
-            <!-- Deck List -->
-            <div id="deck-list" class="deck-grid">
-                <!-- Decks injected here -->
+            <!-- Deck Library (folders + root decks rendered here) -->
+            <div id="deck-library">
+                <!-- Injected by renderLibrary() -->
             </div>
 
             <button class="btn-sm btn-secondary btn-warning" style="margin-top: 30px; width: 100%;"
                 onclick="app.runDiagnostics()">🛠️ Fix Data Issues</button>
+        </div>
+
+        <!-- Move-to-folder modal -->
+        <div id="folder-modal">
+            <div class="folder-modal-card">
+                <h3>📁 Move Deck to Folder</h3>
+                <div id="folder-modal-options"></div>
+                <button class="btn btn-secondary" style="margin-top:8px;" onclick="app.closeFolderModal()">Cancel</button>
+            </div>
         </div>
 
         <!-- STUDY SCREEN -->
@@ -844,8 +973,22 @@
             </div>
 
             <div class="controls" id="controls-area">
-                <button class="btn-control btn-fail" onclick="app.answerCard(false)">Again</button>
-                <button class="btn-control btn-pass" onclick="app.answerCard(true)">Good</button>
+                <div class="btn-control-wrap">
+                    <span class="review-time" id="time-again">&lt;1m</span>
+                    <button class="btn-control btn-again" onclick="app.answerCard(0)">Again</button>
+                </div>
+                <div class="btn-control-wrap">
+                    <span class="review-time" id="time-hard">&lt;6m</span>
+                    <button class="btn-control btn-hard" onclick="app.answerCard(1)">Hard</button>
+                </div>
+                <div class="btn-control-wrap">
+                    <span class="review-time" id="time-good">&lt;10m</span>
+                    <button class="btn-control btn-good" onclick="app.answerCard(2)">Good</button>
+                </div>
+                <div class="btn-control-wrap">
+                    <span class="review-time" id="time-easy">3d</span>
+                    <button class="btn-control btn-easy" onclick="app.answerCard(3)">Easy</button>
+                </div>
             </div>
         </div>
 
@@ -919,6 +1062,12 @@
                 <label>Deck Name:</label>
                 <input type="text" id="import-deck-name" placeholder="e.g. Lesson 1" value="General">
 
+                <label>Add to Folder (optional):</label>
+                <select id="import-folder-id">
+                    <option value="">📂 No Folder (Root)</option>
+                    <!-- Options injected by showImport() -->
+                </select>
+
                 <label>Words (CSV Format):</label>
                 <p style="font-size:0.8rem; color:#6b7280; margin-bottom:5px;">German, "English", Context, CEFR</p>
                 <textarea id="import-text" rows="8"
@@ -950,10 +1099,12 @@
         };
 
         window.app = {
-            db: [], firestore: null, userId: null, unsubscribe: null,
-            sessionQueue: [], currentCardIdx: 0, intervals: [1, 3, 7, 14, 30], batchSize: 50, voices: [], goal: 1000,
-            currentDeckFilter: undefined, // undefined=all/none, string=deck name
+            db: [], folders: [], firestore: null, userId: null, unsubscribe: null,
+            sessionQueue: [], currentCardIdx: 0, batchSize: 50, voices: [], goal: 1000,
+            currentDeckFilter: undefined,
             studyMode: 'DE', // 'DE', 'EN', 'MIX'
+            collapsedFolders: {}, // track which folders are collapsed
+            pendingMoveDeck: null, // deck name awaiting folder assignment
 
             init: async function () {
                 try {
@@ -1034,10 +1185,10 @@
                 this.showStatus('syncing');
                 try {
                     const docRef = doc(this.firestore, 'users', this.userId, 'flashcards', 'main');
-                    await setDoc(docRef, { cards: this.db, goal: this.goal, updated: new Date().toISOString() });
-                    this.showStatus('saved');                      // ← was missing!
+                    await setDoc(docRef, { cards: this.db, folders: this.folders, goal: this.goal, updated: new Date().toISOString() });
+                    this.showStatus('saved');
                 } catch (error) {
-                    console.error("Save error:", error);           // ← LOG IT
+                    console.error("Save error:", error);
                     this.showStatus('error');
                 }
             },
@@ -1062,6 +1213,7 @@
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         this.db = data.cards || [];
+                        this.folders = data.folders || [];
                         this.goal = data.goal || 1000;
                         this.renderLibrary();
                     }
@@ -1079,19 +1231,17 @@
             // --- LIBRARY UI ---
             renderLibrary: function () {
                 const now = Date.now();
-                const deckListEl = document.getElementById('deck-list');
-                deckListEl.innerHTML = '';
+                const libraryEl = document.getElementById('deck-library');
+                libraryEl.innerHTML = '';
 
-                // Group Data
+                // Group Data by deck
                 const decks = {};
                 let globalDue = 0; let globalNew = 0; let globalLearned = 0;
 
                 this.db.forEach(card => {
-                    // Default deck if missing
                     if (!card.deck) card.deck = "General";
                     const dName = card.deck;
-
-                    if (!decks[dName]) decks[dName] = { total: 0, due: 0, new: 0, nextReview: Infinity };
+                    if (!decks[dName]) decks[dName] = { total: 0, due: 0, new: 0, nextReview: Infinity, folderId: card.folderId || null };
                     decks[dName].total++;
 
                     if (card.s === 'new') {
@@ -1101,7 +1251,6 @@
                     } else if (card.s === 'active' && card.due > now) {
                         if (card.due < decks[dName].nextReview) decks[dName].nextReview = card.due;
                     }
-
                     if (card.s === 'active' && card.str > 0) globalLearned++;
                 });
 
@@ -1110,22 +1259,17 @@
                 document.getElementById('global-new-count').textContent = globalNew;
                 document.getElementById('btn-global-review').disabled = (globalDue === 0);
                 document.getElementById('btn-global-new').disabled = (globalNew === 0);
-
-                // Update Goal
                 document.getElementById('goal-learned').textContent = globalLearned;
                 document.getElementById('goal-target').textContent = this.goal;
                 const pct = Math.min(100, (globalLearned / this.goal) * 100);
                 document.getElementById('total-progress').style.width = pct + "%";
 
-                // Render Decks
-                Object.keys(decks).sort().forEach(name => {
-                    const d = decks[name];
+                // Helper: build a deck card element
+                const makeDeckCard = (name, d) => {
                     const div = document.createElement('div');
                     div.className = 'deck-card';
-
                     let statusHtml = '', barClass = '', action = '';
                     const hasWork = (d.due + d.new) > 0;
-
                     if (hasWork) {
                         barClass = 'status-active';
                         statusHtml = `<span class="highlight-due">${d.due} Due</span> • <span class="highlight-new">${d.new} New</span>`;
@@ -1135,29 +1279,159 @@
                         if (d.nextReview !== Infinity) {
                             const days = Math.ceil((d.nextReview - now) / 86400000);
                             const dayText = days <= 1 ? "tomorrow" : `in ${days} days`;
-                            // ADDED HINT FOR CRAM MODE
                             statusHtml = `<span class="highlight-done">✅ Next: ${dayText}</span><div style="font-size:0.8rem; color:#6366f1; margin-top:5px;">Tap to Review Ahead ⏩</div>`;
                         } else {
                             statusHtml = `<span class="highlight-done">✅ All Done</span><div style="font-size:0.8rem; color:#6366f1; margin-top:5px;">Tap to Practice ⏩</div>`;
                         }
-                        // CLICKING FINISHED DECK = CRAM MODE
                         action = `app.startSession('deck_cram', '${name}')`;
                     }
-
+                    const safeName = name.replace(/'/g, "\\'");
                     div.innerHTML = `
-                        <div class="deck-edit-btn" onclick="event.stopPropagation(); app.viewList('${name}')" title="Edit Deck">✏️</div>
+                        <div class="deck-edit-btn" onclick="event.stopPropagation(); app.viewList('${safeName}')" title="Edit Cards">✏️</div>
                         <div class="status-bar ${barClass}"></div>
                         <div class="deck-header"><div class="deck-title">${name}</div><div class="deck-count">${d.total}</div></div>
                         <div class="deck-info">${statusHtml}</div>
+                        <div style="margin-top:10px;">
+                            <button class="folder-action-btn" style="font-size:0.75rem;" onclick="event.stopPropagation(); app.openFolderModal('${safeName}')">📁 Move</button>
+                        </div>
                     `;
                     div.setAttribute('onclick', action);
-                    deckListEl.appendChild(div);
+                    return div;
+                };
+
+                // ---- Render Folders first ----
+                this.folders.forEach(folder => {
+                    const folderDecks = Object.keys(decks).filter(n => decks[n].folderId === folder.id).sort();
+                    const isOpen = !this.collapsedFolders[folder.id];
+
+                    const section = document.createElement('div');
+                    section.className = 'folder-section';
+
+                    const header = document.createElement('div');
+                    header.className = 'folder-header';
+                    header.innerHTML = `
+                        <span class="folder-chevron ${isOpen ? 'open' : ''}" id="chev-${folder.id}">▶</span>
+                        <span class="folder-name">📁 ${folder.name}</span>
+                        <span style="font-size:0.8rem; color:var(--text-light); margin-right:8px;">${folderDecks.length} deck${folderDecks.length !== 1 ? 's' : ''}</span>
+                        <div class="folder-actions">
+                            <button class="folder-action-btn" onclick="event.stopPropagation(); app.renameFolder('${folder.id}')" title="Rename">✏️</button>
+                            <button class="folder-action-btn" onclick="event.stopPropagation(); app.deleteFolder('${folder.id}')" title="Delete">🗑️</button>
+                        </div>
+                    `;
+                    header.addEventListener('click', () => this.toggleFolder(folder.id));
+
+                    const decksContainer = document.createElement('div');
+                    decksContainer.className = 'folder-decks' + (isOpen ? '' : ' collapsed');
+                    decksContainer.id = 'folder-decks-' + folder.id;
+
+                    folderDecks.forEach(name => decksContainer.appendChild(makeDeckCard(name, decks[name])));
+
+                    if (folderDecks.length === 0) {
+                        decksContainer.innerHTML = '<p style="color:var(--text-light);font-size:0.85rem;padding:8px 0;">No decks in this folder yet.</p>';
+                    }
+
+                    section.appendChild(header);
+                    section.appendChild(decksContainer);
+                    libraryEl.appendChild(section);
                 });
+
+                // ---- Root Decks (no folder) ----
+                const rootDecks = Object.keys(decks).filter(n => !decks[n].folderId).sort();
+                if (rootDecks.length > 0) {
+                    const rootGrid = document.createElement('div');
+                    rootGrid.className = 'deck-grid';
+                    rootDecks.forEach(name => rootGrid.appendChild(makeDeckCard(name, decks[name])));
+                    libraryEl.appendChild(rootGrid);
+                }
 
                 // Populate Datalist for Edit Suggestions
                 const dl = document.getElementById('deck-suggestions');
-                dl.innerHTML = '';
-                Object.keys(decks).forEach(d => { dl.innerHTML += `<option value="${d}">`; });
+                if (dl) {
+                    dl.innerHTML = '';
+                    Object.keys(decks).forEach(d => { dl.innerHTML += `<option value="${d}">`; });
+                }
+            },
+
+            // --- FOLDER MANAGEMENT ---
+            createFolder: function () {
+                const name = prompt("Folder name:");
+                if (!name || !name.trim()) return;
+                this.folders.push({ id: Date.now().toString(), name: name.trim() });
+                this.saveToCloud();
+                this.renderLibrary();
+            },
+
+            toggleFolder: function (id) {
+                this.collapsedFolders[id] = !this.collapsedFolders[id];
+                const container = document.getElementById('folder-decks-' + id);
+                const chev = document.getElementById('chev-' + id);
+                if (container) container.classList.toggle('collapsed', !!this.collapsedFolders[id]);
+                if (chev) chev.classList.toggle('open', !this.collapsedFolders[id]);
+            },
+
+            renameFolder: function (id) {
+                const folder = this.folders.find(f => f.id === id);
+                if (!folder) return;
+                const name = prompt("New folder name:", folder.name);
+                if (!name || !name.trim()) return;
+                folder.name = name.trim();
+                this.saveToCloud();
+                this.renderLibrary();
+            },
+
+            deleteFolder: function (id) {
+                const folder = this.folders.find(f => f.id === id);
+                if (!folder) return;
+                if (!confirm(`Delete folder "${folder.name}"? Decks inside will be moved to root.`)) return;
+                // Unassign all decks from this folder
+                this.db.forEach(card => { if (card.folderId === id) delete card.folderId; });
+                this.folders = this.folders.filter(f => f.id !== id);
+                this.saveToCloud();
+                this.renderLibrary();
+            },
+
+            openFolderModal: function (deckName) {
+                this.pendingMoveDeck = deckName;
+                const optionsEl = document.getElementById('folder-modal-options');
+                optionsEl.innerHTML = '';
+
+                // "No Folder" option
+                const noFolder = document.createElement('div');
+                noFolder.className = 'folder-option';
+                noFolder.textContent = '🏠 No Folder (Root)';
+                noFolder.onclick = () => this.moveDeckToFolder(deckName, null);
+                optionsEl.appendChild(noFolder);
+
+                this.folders.forEach(folder => {
+                    const opt = document.createElement('div');
+                    opt.className = 'folder-option';
+                    opt.textContent = '📁 ' + folder.name;
+                    opt.onclick = () => this.moveDeckToFolder(deckName, folder.id);
+                    optionsEl.appendChild(opt);
+                });
+
+                if (this.folders.length === 0) {
+                    optionsEl.innerHTML += '<p style="color:var(--text-light);font-size:0.9rem;">No folders yet. Create one first with "📁 Folder".</p>';
+                }
+
+                document.getElementById('folder-modal').classList.add('open');
+            },
+
+            closeFolderModal: function () {
+                document.getElementById('folder-modal').classList.remove('open');
+                this.pendingMoveDeck = null;
+            },
+
+            moveDeckToFolder: function (deckName, folderId) {
+                this.db.forEach(card => {
+                    if (card.deck === deckName) {
+                        if (folderId) card.folderId = folderId;
+                        else delete card.folderId;
+                    }
+                });
+                this.saveToCloud();
+                this.closeFolderModal();
+                this.renderLibrary();
             },
 
             // --- STUDY MODES ---
@@ -1251,28 +1525,69 @@
             flipCard: function () {
                 const el = document.getElementById('card-element');
                 el.classList.toggle('is-flipped');
-                if (el.classList.contains('is-flipped')) setTimeout(() => document.getElementById('controls-area').classList.add('visible'), 200);
-                else document.getElementById('controls-area').classList.remove('visible');
+                if (el.classList.contains('is-flipped')) {
+                    this.updateTimeLabels();
+                    setTimeout(() => document.getElementById('controls-area').classList.add('visible'), 200);
+                } else {
+                    document.getElementById('controls-area').classList.remove('visible');
+                }
             },
 
-            answerCard: function (correct) {
+            // --- SRS SCHEDULING ---
+            // Base intervals (days) indexed by streak level
+            baseIntervals: [1, 3, 7, 14, 30, 60, 120],
+
+            getInterval: function (card, rating) {
+                // rating: 0=Again, 1=Hard, 2=Good, 3=Easy
+                const str = card.str || 0;
+                const baseIdx = Math.min(str, this.baseIntervals.length - 1);
+                const baseDays = this.baseIntervals[baseIdx];
+                if (rating === 0) return 0;           // Again: immediate
+                if (rating === 1) return Math.max(1, Math.round(baseDays * 0.6)); // Hard: 60% of current
+                if (rating === 2) return baseDays;     // Good: current base
+                if (rating === 3) return Math.round(baseDays * 2.5); // Easy: 2.5×
+            },
+
+            formatInterval: function (days) {
+                if (days === 0) return '<1m';
+                if (days < 1) return '<1d';
+                if (days === 1) return '1d';
+                return days + 'd';
+            },
+
+            updateTimeLabels: function () {
                 const card = this.db[this.currentCardIdx];
-                if (correct) {
-                    // Success: Move to active, schedule next review
-                    card.s = 'active'; card.str++;
-                    card.due = Date.now() + (this.intervals[Math.min(card.str, this.intervals.length - 1)] * 86400000);
-                    this.sessionQueue.shift();
-                } else {
-                    // Fail logic: if it WAS new, keep it new (don't set to active). If active, reset streak.
-                    if (card.s === 'active') {
-                        card.str = 0;
-                        card.due = Date.now();
-                    }
-                    // For new cards, we just push them back to the queue without changing status to 'active' or setting a date yet
-                    // This keeps them in the "New" bucket until "Good" is clicked.
+                if (!card) return;
+                document.getElementById('time-again').textContent = '<1m';
+                document.getElementById('time-hard').textContent  = this.formatInterval(this.getInterval(card, 1));
+                document.getElementById('time-good').textContent  = this.formatInterval(this.getInterval(card, 2));
+                document.getElementById('time-easy').textContent  = this.formatInterval(this.getInterval(card, 3));
+            },
+
+            answerCard: function (rating) {
+                // rating: 0=Again, 1=Hard, 2=Good, 3=Easy
+                const card = this.db[this.currentCardIdx];
+                const days = this.getInterval(card, rating);
+
+                if (rating === 0) {
+                    // Again: reset streak, put back in queue
+                    if (card.s === 'active') { card.str = 0; card.due = Date.now(); }
                     this.sessionQueue.push(this.sessionQueue.shift());
+                } else {
+                    // Hard / Good / Easy: schedule forward
+                    card.s = 'active';
+                    if (rating === 1) {
+                        // Hard: keep streak, shorten interval
+                    } else if (rating === 2) {
+                        card.str = (card.str || 0) + 1;
+                    } else if (rating === 3) {
+                        card.str = (card.str || 0) + 2;
+                    }
+                    card.due = Date.now() + days * 86400000;
+                    this.sessionQueue.shift();
                 }
-                this.saveToCloud(); this.loadNextCard();
+                this.saveToCloud();
+                this.loadNextCard();
             },
 
             // --- EDITING & LIST ---
@@ -1366,6 +1681,7 @@
             // --- IMPORT ---
             processImport: function () {
                 const deckName = document.getElementById('import-deck-name').value.trim() || "General";
+                const folderId = document.getElementById('import-folder-id').value || null;
                 const txt = document.getElementById('import-text').value;
                 if (!txt.trim()) return;
 
@@ -1385,7 +1701,9 @@
 
                         const exists = this.db.some(card => card.f.toLowerCase() === f.toLowerCase() && card.b.toLowerCase() === b.toLowerCase());
                         if (!exists && f && b) {
-                            this.db.push({ id: Date.now() + Math.random(), f: f, b: b, c: c, cefr: cefr, deck: deckName, s: 'new', str: 0, due: 0 });
+                            const newCard = { id: Date.now() + Math.random(), f: f, b: b, c: c, cefr: cefr, deck: deckName, s: 'new', str: 0, due: 0 };
+                            if (folderId) newCard.folderId = folderId;
+                            this.db.push(newCard);
                             added++;
                         }
                     }
@@ -1399,16 +1717,38 @@
             editGoal: function () { const g = prompt("Set Goal:", this.goal); if (g) { this.goal = parseInt(g); this.saveToCloud(); } },
             runDiagnostics: function () {
                 let fix = 0;
-                this.db.forEach(c => { if (!c.s) { c.s = 'new'; fix++ } if (!c.deck) { c.deck = 'General'; fix++ } });
+                this.db.forEach(c => { if (!c.s) { c.s = 'new'; fix++ } if (!c.deck) { c.deck = 'General'; fix++ } if (c.str === undefined) { c.str = 0; fix++ } });
                 if (fix > 0) { this.saveToCloud(); alert(`Fixed ${fix} items.`); } else alert("Data OK.");
             },
             resetData: function () { if (confirm("Delete ALL data?")) { this.db = []; this.saveToCloud(); } },
             log: function (msg) { const box = document.getElementById('system-log'); if (box) { box.innerText = msg; console.log(msg); } },
 
             showScreen: function (id) { document.querySelectorAll('.screen').forEach(el => el.classList.remove('active')); document.getElementById(id).classList.add('active'); },
-            showImport: function () { this.showScreen('import'); },
+            showImport: function () {
+                // Populate folder selector with current folders
+                const sel = document.getElementById('import-folder-id');
+                sel.innerHTML = '<option value="">📂 No Folder (Root)</option>';
+                this.folders.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.id;
+                    opt.textContent = '📁 ' + f.name;
+                    sel.appendChild(opt);
+                });
+                this.showScreen('import');
+            },
             goHome: function () { this.currentDeckFilter = null; this.showScreen('library'); this.renderLibrary(); },
-            setupKeyboard: function () { document.addEventListener('keydown', (e) => { if (!document.getElementById('study').classList.contains('active')) return; if (e.code === 'Space') { this.flipCard(); e.preventDefault(); } else if (e.code === 'ArrowRight') this.answerCard(true); else if (e.code === 'ArrowLeft') this.answerCard(false); }); }
+            setupKeyboard: function () {
+                document.addEventListener('keydown', (e) => {
+                    if (!document.getElementById('study').classList.contains('active')) return;
+                    if (e.code === 'Space') { this.flipCard(); e.preventDefault(); }
+                    else if (e.code === 'Digit1') this.answerCard(0); // Again
+                    else if (e.code === 'Digit2') this.answerCard(1); // Hard
+                    else if (e.code === 'Digit3') this.answerCard(2); // Good
+                    else if (e.code === 'Digit4') this.answerCard(3); // Easy
+                    else if (e.code === 'ArrowRight') this.answerCard(2); // Good (back-compat)
+                    else if (e.code === 'ArrowLeft') this.answerCard(0);  // Again (back-compat)
+                });
+            }
         };
 
         window.addEventListener('DOMContentLoaded', () => app.init());
