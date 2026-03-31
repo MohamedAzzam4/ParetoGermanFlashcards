@@ -299,6 +299,7 @@
             align-items: flex-start;
             margin-bottom: 25px;
             margin-top: 10px;
+            padding-right: 30px; /* Prevent overlap with the edit button */
         }
 
         .deck-title {
@@ -828,6 +829,26 @@
             opacity: 0.95;
             pointer-events: none;
         }
+
+        /* --- Separator buttons --- */
+        .sep-btn {
+            padding: 5px 11px;
+            border-radius: 20px;
+            border: 1px solid #d1d5db;
+            background: white;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: monospace;
+        }
+        .sep-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .sep-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
     </style>
 </head>
 
@@ -894,8 +915,20 @@
                     <div class="goal-text"><span>Learned words</span><span>Target 🎯</span></div>
                 </div>
 
-                <!-- Study Mode Selector -->
-                <span class="mode-label">Face Side:</span>
+                <!-- Study Config (Mode + Limit) -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
+                    <span class="mode-label" style="margin-bottom: 0;">Face Side:</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="mode-label" style="margin-bottom: 0; font-size: 0.8rem;">Limit:</span>
+                        <select id="session-limit" onchange="app.setSessionLimit(this.value)" style="padding: 2px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.8rem; background: white; cursor: pointer; width: auto; margin: 0; outline: none;">
+                            <option value="0">Unlimited</option>
+                            <option value="20">20 cards</option>
+                            <option value="30">30 cards</option>
+                            <option value="40">40 cards</option>
+                            <option value="50">50 cards</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="mode-selector">
                     <button class="mode-btn active" onclick="app.setStudyMode('DE')" id="mode-de">🇩🇪 German</button>
                     <button class="mode-btn" onclick="app.setStudyMode('EN')" id="mode-en">🇬🇧 English</button>
@@ -1059,19 +1092,66 @@
         <div id="import" class="screen">
             <div class="dashboard-card" style="text-align: left;">
                 <h2 style="text-align: center;">Add Cards</h2>
-                <label>Deck Name:</label>
-                <input type="text" id="import-deck-name" placeholder="e.g. Lesson 1" value="General">
 
-                <label>Add to Folder (optional):</label>
-                <select id="import-folder-id">
-                    <option value="">📂 No Folder (Root)</option>
-                    <!-- Options injected by showImport() -->
-                </select>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label>Deck Name:</label>
+                        <input type="text" id="import-deck-name" placeholder="e.g. Lesson 1" value="General">
+                    </div>
+                    <div>
+                        <label>Add to Folder (optional):</label>
+                        <select id="import-folder-id">
+                            <option value="">📂 No Folder (Root)</option>
+                        </select>
+                    </div>
+                </div>
 
-                <label>Words (CSV Format):</label>
-                <p style="font-size:0.8rem; color:#6b7280; margin-bottom:5px;">German, "English", Context, CEFR</p>
+                <!-- Separator Config -->
+                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:14px; margin-bottom:12px;">
+                    <div style="font-weight:700; font-size:0.85rem; color:var(--text-light); margin-bottom:10px;">⚙️ FORMAT SETTINGS</div>
+
+                    <label>Field Separator <small style="font-weight:400;">(splits German / English / Context / CEFR)</small></label>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;" id="field-sep-btns">
+                        <button class="sep-btn active" data-val="," onclick="app.setSep('field',',',this)">, &nbsp;comma</button>
+                        <button class="sep-btn" data-val=";" onclick="app.setSep('field',';',this)">; &nbsp;semicolon</button>
+                        <button class="sep-btn" data-val="|" onclick="app.setSep('field','|',this)">| &nbsp;pipe</button>
+                        <button class="sep-btn" data-val="	" onclick="app.setSep('field','\t',this)">⇥ tab</button>
+                        <button class="sep-btn" data-val="→" onclick="app.setSep('field','→',this)">→ arrow</button>
+                        <span style="display:flex;align-items:center;gap:4px;">
+                            <span style="font-size:0.8rem;color:var(--text-light);">Custom:</span>
+                            <input id="field-sep-custom" type="text" maxlength="5"
+                                style="width:60px;margin:0;padding:5px 8px;font-size:0.85rem;"
+                                placeholder="..." oninput="app.setSep('field',this.value)">
+                        </span>
+                    </div>
+
+                    <label>Sub-field Separator <small style="font-weight:400;">(splits examples / plural / notes within context)</small></label>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;" id="sub-sep-btns">
+                        <button class="sep-btn active" data-val="/" onclick="app.setSep('sub','/',this)">/ &nbsp;slash</button>
+                        <button class="sep-btn" data-val="|" onclick="app.setSep('sub','|',this)">| &nbsp;pipe</button>
+                        <button class="sep-btn" data-val=";" onclick="app.setSep('sub',';',this)">; &nbsp;semicolon</button>
+                        <button class="sep-btn" data-val="::" onclick="app.setSep('sub','::',this)">::</button>
+                        <button class="sep-btn" data-val="·" onclick="app.setSep('sub','·',this)">· dot</button>
+                        <span style="display:flex;align-items:center;gap:4px;">
+                            <span style="font-size:0.8rem;color:var(--text-light);">Custom:</span>
+                            <input id="sub-sep-custom" type="text" maxlength="5"
+                                style="width:60px;margin:0;padding:5px 8px;font-size:0.85rem;"
+                                placeholder="..." oninput="app.setSep('sub',this.value)">
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Live Preview -->
+                <div id="import-preview" style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:10px; margin-bottom:10px; font-size:0.82rem; display:none;">
+                    <div style="font-weight:700; color:#166534; margin-bottom:4px;">Preview (first line):</div>
+                    <div id="import-preview-body"></div>
+                </div>
+
+                <label style="margin-top:4px;">Cards:</label>
+                <p style="font-size:0.8rem; color:#6b7280; margin-bottom:5px;" id="import-format-hint">German, English, Context/Examples, CEFR</p>
                 <textarea id="import-text" rows="8"
-                    placeholder='der Hund, "the dog", Der Hund ist schnell, A1'></textarea>
+                    placeholder='der Hund, "the dog", Die Hunde bellen / example 2, A1'
+                    oninput="app.previewImport()"></textarea>
 
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
                     <button class="btn" onclick="app.processImport()">Save Cards</button>
@@ -1103,6 +1183,8 @@
             sessionQueue: [], currentCardIdx: 0, batchSize: 50, voices: [], goal: 1000,
             currentDeckFilter: undefined,
             studyMode: 'DE', // 'DE', 'EN', 'MIX'
+            sessionLimit: 0, // 0 means unlimited
+            currentSessionMode: null, // Track normal vs cram mode
             collapsedFolders: {}, // track which folders are collapsed
             pendingMoveDeck: null, // deck name awaiting folder assignment
 
@@ -1435,6 +1517,9 @@
             },
 
             // --- STUDY MODES ---
+            setSessionLimit: function(val) {
+                this.sessionLimit = parseInt(val, 10) || 0;
+            },
             setStudyMode: function (mode) {
                 this.studyMode = mode;
                 document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -1445,6 +1530,7 @@
 
             // --- SESSION ---
             startSession: function (mode, deckName) {
+                this.currentSessionMode = mode;
                 const now = Date.now();
                 let pool = [];
 
@@ -1463,7 +1549,7 @@
                     document.getElementById('deck-label').textContent = deckName;
                 }
                 else if (mode === 'deck_cram') {
-                    // NEW: Cram mode grabs ALL cards in deck
+                    // Cram mode grabs ALL cards in deck
                     pool = this.db.filter(c => c.deck === deckName);
                     document.getElementById('deck-label').textContent = deckName + " (Cram)";
                 }
@@ -1471,7 +1557,13 @@
                 if (pool.length === 0) { alert("Nothing to study here!"); return; }
 
                 this.sessionQueue = pool.map(c => this.db.indexOf(c));
-                this.sessionQueue.sort(() => Math.random() - 0.5);
+                this.sessionQueue.sort(() => Math.random() - 0.5); // Shuffle randomly
+                
+                // Apply limit if set
+                if (this.sessionLimit > 0) {
+                    this.sessionQueue = this.sessionQueue.slice(0, this.sessionLimit);
+                }
+
                 this.sessionTotal = this.sessionQueue.length;
                 this.showScreen('study'); this.loadNextCard();
             },
@@ -1534,15 +1626,63 @@
             // Base intervals (days) indexed by streak level
             baseIntervals: [1, 3, 7, 14, 30, 60, 120],
 
-            getInterval: function (card, rating) {
+            getNearestStr: function(targetDays) {
+                let bestIdx = 0;
+                let minDiff = Infinity;
+                for (let i = 0; i < this.baseIntervals.length; i++) {
+                    let diff = Math.abs(this.baseIntervals[i] - targetDays);
+                    // if equal difference, prefer higher idx to ensure progression
+                    if (diff < minDiff || (diff === minDiff && i > bestIdx)) {
+                        minDiff = diff;
+                        bestIdx = i;
+                    }
+                }
+                return bestIdx;
+            },
+
+            getIntervalAndStreak: function (card, rating) {
                 // rating: 0=Again, 1=Hard, 2=Good, 3=Easy
+                if (rating === 0) return { days: 0, str: 0 };
+
                 const str = card.str || 0;
                 const baseIdx = Math.min(str, this.baseIntervals.length - 1);
                 const baseDays = this.baseIntervals[baseIdx];
-                if (rating === 0) return 0;           // Again: immediate
-                if (rating === 1) return Math.max(1, Math.round(baseDays * 0.6)); // Hard: 60% of current
-                if (rating === 2) return baseDays;     // Good: current base
-                if (rating === 3) return Math.round(baseDays * 2.5); // Easy: 2.5×
+                
+                // Determine true elapsed time since last review
+                let elapsedDays = baseDays; // Default for perfectly on-time
+                if (card.due) {
+                    const lastReview = card.due - (baseDays * 86400000);
+                    elapsedDays = Math.max(0, (Date.now() - lastReview) / 86400000);
+                }
+
+                // If brand new or first review, give optimal baseline
+                if (card.s === 'new' || !card.due) {
+                    elapsedDays = baseDays; 
+                }
+
+                // SAME-DAY PRACTICE PROTECTION: 
+                // If reviewed within 12 hours (0.5 days) of the last review, freeze progress
+                if (elapsedDays < 0.5 && card.s !== 'new') {
+                    return { days: baseDays, str: str }; 
+                }
+
+                let newDays = baseDays;
+                if (rating === 1) { // Hard: shorten
+                    newDays = Math.max(1, baseDays * 0.6);
+                } else if (rating === 2) { // Good: Base + 100% of elapsed
+                    newDays = baseDays + (elapsedDays * 1.0);
+                } else if (rating === 3) { // Easy: Base + 150% of elapsed
+                    newDays = baseDays + (elapsedDays * 1.5);
+                }
+
+                newDays = Math.round(newDays);
+                const newStr = this.getNearestStr(newDays);
+
+                return { days: newDays, str: newStr };
+            },
+
+            getInterval: function (card, rating) {
+                return this.getIntervalAndStreak(card, rating).days;
             },
 
             formatInterval: function (days) {
@@ -1564,22 +1704,17 @@
             answerCard: function (rating) {
                 // rating: 0=Again, 1=Hard, 2=Good, 3=Easy
                 const card = this.db[this.currentCardIdx];
-                const days = this.getInterval(card, rating);
+                const result = this.getIntervalAndStreak(card, rating);
+                const days = result.days;
 
                 if (rating === 0) {
                     // Again: reset streak, put back in queue
                     if (card.s === 'active') { card.str = 0; card.due = Date.now(); }
                     this.sessionQueue.push(this.sessionQueue.shift());
                 } else {
-                    // Hard / Good / Easy: schedule forward
+                    // Hard / Good / Easy: Apply Neural Pro-Rata Math
                     card.s = 'active';
-                    if (rating === 1) {
-                        // Hard: keep streak, shorten interval
-                    } else if (rating === 2) {
-                        card.str = (card.str || 0) + 1;
-                    } else if (rating === 3) {
-                        card.str = (card.str || 0) + 2;
-                    }
+                    card.str = result.str;
                     card.due = Date.now() + days * 86400000;
                     this.sessionQueue.shift();
                 }
@@ -1675,6 +1810,68 @@
                 }
             },
 
+            // --- IMPORT SEPARATORS ---
+            fieldSep: ',',
+            subSep: '/',
+
+            setSep: function (type, val, btnEl) {
+                if (!val) return;
+                if (type === 'field') {
+                    this.fieldSep = val;
+                    // Update active button state
+                    document.querySelectorAll('#field-sep-btns .sep-btn').forEach(b => b.classList.remove('active'));
+                    if (btnEl) btnEl.classList.add('active');
+                    // Update format hint
+                    const displaySep = val === '\t' ? '⇥' : val;
+                    document.getElementById('import-format-hint').textContent =
+                        `German ${displaySep} English ${displaySep} Context/Examples ${displaySep} CEFR`;
+                } else {
+                    this.subSep = val;
+                    document.querySelectorAll('#sub-sep-btns .sep-btn').forEach(b => b.classList.remove('active'));
+                    if (btnEl) btnEl.classList.add('active');
+                }
+                this.previewImport();
+            },
+
+            splitLine: function (line, sep) {
+                // For comma, respect quoted strings; for others, plain split
+                if (sep === ',') {
+                    const parts = []; let current = ''; let inQuote = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const ch = line[i];
+                        if (ch === '"') { inQuote = !inQuote; }
+                        else if (ch === sep && !inQuote) { parts.push(current.trim().replace(/^"|"$/g, '')); current = ''; continue; }
+                        if (ch !== '"') current += ch;
+                    }
+                    parts.push(current.trim().replace(/^"|"$/g, ''));
+                    return parts;
+                }
+                return line.split(sep).map(s => s.trim().replace(/^"|"$/g, ''));
+            },
+
+            previewImport: function () {
+                const txt = document.getElementById('import-text').value;
+                const firstLine = txt.split(/[\n\r]+/).find(l => l.trim());
+                const previewEl = document.getElementById('import-preview');
+                const bodyEl = document.getElementById('import-preview-body');
+                if (!firstLine) { previewEl.style.display = 'none'; return; }
+
+                const parts = this.splitLine(firstLine, this.fieldSep);
+                const [german='', english='', context='', cefr=''] = parts;
+                const subParts = context ? context.split(this.subSep).map(s => s.trim()) : [];
+
+                bodyEl.innerHTML = [
+                    `<div><b style="color:#166534;">🇩🇪 German:</b> ${german || '<em style="color:#9ca3af">—</em>'}</div>`,
+                    `<div><b style="color:#1d4ed8;">🇬🇧 English:</b> ${english || '<em style="color:#9ca3af">—</em>'}</div>`,
+                    subParts.length > 0 ? `<div><b style="color:#854d0e;">📝 Context parts (${subParts.length}):</b> ${subParts.map((p,i)=>{
+                        const labels = ['Example','Plural','Note','Extra'];
+                        return `<span style="background:#fef9c3;padding:1px 5px;border-radius:4px;margin:2px;display:inline-block;"><em>${labels[i]||'Part '+(i+1)}:</em> ${p}</span>`;
+                    }).join('')}</div>` : `<div><b style="color:#854d0e;">📝 Context:</b> ${context || '<em style="color:#9ca3af">—</em>'}</div>`,
+                    cefr ? `<div><b style="color:#6b21a8;">📊 CEFR:</b> ${cefr}</div>` : ''
+                ].join('');
+                previewEl.style.display = 'block';
+            },
+
             // --- IMPORT ---
             processImport: function () {
                 const deckName = document.getElementById('import-deck-name').value.trim() || "General";
@@ -1686,27 +1883,28 @@
                 let added = 0;
                 lines.forEach(line => {
                     line = line.trim(); if (!line) return;
-                    const parts = []; let current = ''; let inQuote = false;
-                    for (let i = 0; i < line.length; i++) {
-                        const char = line[i]; if (char === '"') { inQuote = !inQuote; current += char; } else if (char === ',' && !inQuote) { parts.push(current); current = ''; } else { current += char; }
-                    }
-                    parts.push(current);
+                    const parts = this.splitLine(line, this.fieldSep);
+                    if (parts.length < 2) return;
 
-                    if (parts.length >= 2) {
-                        const clean = (s) => s ? s.trim().replace(/^"|"$/g, '') : "";
-                        const f = clean(parts[0]); const b = clean(parts[1]); const c = parts[2] ? clean(parts[2]) : ""; const cefr = parts[3] ? clean(parts[3]) : "";
+                    const [rawF, rawB, rawC='', rawCefr=''] = parts;
+                    const f = rawF.trim();
+                    const b = rawB.trim();
+                    // Join sub-fields with " • " so they're stored and shown cleanly
+                    const c = rawC ? rawC.split(this.subSep).map(s => s.trim()).filter(Boolean).join(' • ') : '';
+                    const cefr = rawCefr.trim();
 
-                        const exists = this.db.some(card => card.f.toLowerCase() === f.toLowerCase() && card.b.toLowerCase() === b.toLowerCase());
-                        if (!exists && f && b) {
-                            const newCard = { id: Date.now() + Math.random(), f: f, b: b, c: c, cefr: cefr, deck: deckName, s: 'new', str: 0, due: 0 };
-                            if (folderId) newCard.folderId = folderId;
-                            this.db.push(newCard);
-                            added++;
-                        }
+                    if (!f || !b) return;
+                    const exists = this.db.some(card => card.f.toLowerCase() === f.toLowerCase() && card.b.toLowerCase() === b.toLowerCase());
+                    if (!exists) {
+                        const newCard = { id: Date.now() + Math.random(), f, b, c, cefr, deck: deckName, s: 'new', str: 0, due: 0 };
+                        if (folderId) newCard.folderId = folderId;
+                        this.db.push(newCard);
+                        added++;
                     }
                 });
                 alert(`Added ${added} words to "${deckName}".`);
-                document.getElementById('import-text').value = ""; this.saveToCloud(); this.goHome();
+                document.getElementById('import-text').value = '';
+                this.saveToCloud(); this.goHome();
             },
 
             // --- UTILS ---
